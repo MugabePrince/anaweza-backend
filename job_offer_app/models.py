@@ -3,22 +3,14 @@ from django.utils import timezone
 from userApp.models import CustomUser
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
+from jobCategoryApp.models import JobType, JobCategory
 
 class JobOffer(models.Model):
-    JOB_TYPE_CHOICES = [
-        ('full_time', 'Full Time'),
-        ('part_time', 'Part Time'),
-        ('contract', 'Contract'),
-        ('internship', 'Internship'),
-        ('freelance', 'Freelance'),
-    ]
-
     EXPERIENCE_LEVEL_CHOICES = [
         ('entry', 'Entry Level'),
+        ('intermediate', 'Intermediate'),
         ('mid', 'Mid Level'),
-        ('senior', 'Senior Level'),
-        ('lead', 'Lead'),
-        ('manager', 'Manager'),
+        ('senior or executive', 'Senior or Executive Level'),
     ]
 
     STATUS_CHOICES = [
@@ -31,24 +23,27 @@ class JobOffer(models.Model):
     OFFER_TYPE_CHOICES = [
         ('company', 'Company'),
         ('individual', 'Individual'),
+        ('government', 'Government'),
+        ('non-government organization', 'Non-Government Organization'),
     ]
 
     # Basic Information
     title = models.CharField(max_length=200)
-    offer_type = models.CharField(max_length=20, choices=OFFER_TYPE_CHOICES, default='individual')
+    offer_type = models.CharField(max_length=50, choices=OFFER_TYPE_CHOICES, default='individual')
     company_name = models.CharField(max_length=200, null=True, blank=True)
     
     # Location and Job Details
     location = models.CharField(max_length=200)
-    job_type = models.CharField(max_length=20, choices=JOB_TYPE_CHOICES)
+    job_type = models.ForeignKey(JobType, on_delete=models.CASCADE, related_name='job_type')
+    job_category = models.ForeignKey(JobCategory, on_delete=models.CASCADE, related_name='job_category', default=1)
     experience_level = models.CharField(max_length=20, choices=EXPERIENCE_LEVEL_CHOICES)
     salary_range = models.CharField(max_length=100, null=True, blank=True)
     
-    # Detailed Information
+    # Detailed Information (Stored as JSON lists)
     description = models.TextField()
-    requirements = models.TextField()
-    responsibilities = models.TextField()
-    benefits = models.TextField(null=True, blank=True)
+    requirements = models.JSONField(default=list)  # List of requirements
+    responsibilities = models.JSONField(default=list)  # List of responsibilities
+    benefits = models.JSONField(default=list, blank=True)  # List of benefits
     
     # Dates and Status
     deadline = models.DateField()
@@ -63,11 +58,8 @@ class JobOffer(models.Model):
         return f"{self.title} by {self.created_by.phone_number}"
 
     def clean(self):
-        # Validate company name is provided for company offers
         if self.offer_type == 'company' and not self.company_name:
-            raise models.ValidationError({
-                'company_name': 'Company name is required for company job offers'
-            })
+            raise models.ValidationError({'company_name': 'Company name is required for company job offers'})
 
     def update_status_based_on_deadline(self):
         """Update status based on deadline"""
@@ -83,7 +75,6 @@ class JobOffer(models.Model):
 # Signal to handle status updates before saving
 @receiver(pre_save, sender=JobOffer)
 def check_deadline_status(sender, instance, **kwargs):
-    # Don't change status if it's manually set to closed
     if instance.status != 'closed':
         today = timezone.now().date()
         if instance.deadline < today:
