@@ -1,10 +1,18 @@
 from pathlib import Path
 from datetime import timedelta
 import os
+import dj_database_url
+import environ
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+env = environ.Env()
+environ.Env.read_env()
+
+
 
 
 # Quick-start development settings - unsuitable for production
@@ -75,18 +83,25 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'anaweza',
+#         'USER': 'root',
+#         'PASSWORD': '07288',
+#         'HOST': 'localhost',
+#         'PORT': '3306',
+
+#     }
+# }
+
+
+
+
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'anaweza',
-        'USER': 'root',
-        'PASSWORD': '07288',
-        'HOST': 'localhost',
-        'PORT': '3306',
-
-    }
+    'default': dj_database_url.parse(env('DATABASE_URL'))
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
