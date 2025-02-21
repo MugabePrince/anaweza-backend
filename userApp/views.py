@@ -133,8 +133,10 @@ def register_user(request):
 @authentication_classes([])
 @permission_classes([AllowAny])
 def login_user(request):
-    email_or_phone = request.data.get('email_or_phone')
+    email_or_phone = request.data.get('identifier')
     password = request.data.get('password')
+
+    print(f"\n Submitted data: \n Email/Phone: {email_or_phone} \n Password: {password} \n")
 
     # Basic validations
     if not email_or_phone or not password:

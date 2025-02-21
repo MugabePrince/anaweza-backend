@@ -25,7 +25,10 @@ class CustomUserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, phone_number, password=None, email=None):
+    def create_superuser(self, phone_number, email, password=None):
+        if not email:
+            raise ValueError("Superuser must have an email address")
+
         user = self.create_user(
             phone_number=phone_number,
             role='admin',
@@ -48,7 +51,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     ]
 
     phone_number = models.CharField(max_length=15, unique=True)
-    email = models.EmailField(unique=True, null=True, blank=True)
+    email = models.EmailField(unique=True, null=True, blank=True)  # Keeps email optional
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -56,7 +59,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     created_at = models.DateTimeField(default=now)
 
     USERNAME_FIELD = 'phone_number'
-    REQUIRED_FIELDS = []
+    REQUIRED_FIELDS = ['email']  # Required only for createsuperuser command
 
     objects = CustomUserManager()
 
@@ -68,3 +71,4 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     def has_module_perms(self, app_label):
         return self.is_admin if hasattr(self, 'is_admin') else False
+    
