@@ -328,6 +328,7 @@ def update_user(request, user_id):
         user.email = email
         user.role = role
         user.status = status
+        user.is_active = True
         user.save()
 
         return Response({"message": "User updated successfully."}, status=200)
