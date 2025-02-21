@@ -1,1 +1,1 @@
-web: gunicon a_core.wsgi
+web: gunicon backend.wsgi --log-file -
