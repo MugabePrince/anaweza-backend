@@ -24,7 +24,8 @@ SECRET_KEY = 'django-insecure-&^7qw8hns(vrk^xo!dnbvuqy&@y6@l&7n3plxf&z#x(u2(#z&9
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'anaweza-backend.up.railway.app', 'anaweza.com']
+CSRF_TRUSTED_ORIGINS = ['https://anaweza-backend.up.railway.app', 'https://anaweza.com']
 
 
 # Application definition

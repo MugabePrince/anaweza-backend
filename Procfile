@@ -1,0 +1,1 @@
+web: gunicon a_core.wsgi
