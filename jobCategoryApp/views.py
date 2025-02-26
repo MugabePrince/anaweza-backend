@@ -1,14 +1,16 @@
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import JobCategory, JobType
 from .serializers import JobCategorySerializer, JobTypeSerializer
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
 
 # Job Category Views
+
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def list_job_categories(request):
     job_categories = JobCategory.objects.all()
     serializer = JobCategorySerializer(job_categories, many=True, context={'request': request})
@@ -118,6 +120,7 @@ def create_job_type(request):
 
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def list_job_types(request):
     job_types = JobType.objects.all()
     serializer = JobTypeSerializer(job_types, many=True, context={'request': request})

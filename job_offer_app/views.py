@@ -1,3 +1,4 @@
+from datetime import timezone
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
@@ -84,13 +85,112 @@ def create_job_offer(request):
 
 
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.response import Response
+from rest_framework import status
+from .models import JobOffer
+from .serializers import JobOfferSerializer
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.db import DatabaseError
+from django.utils import timezone
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def get_job_offer_by_id(request, job_id):
-    job_offer = JobOffer.objects.filter(id=job_id)
-    serializer = JobOfferSerializer(job_offer)
-    return Response(serializer.data)
+    try:
+        # Validate that job_id is a positive integer
+        if not str(job_id).isdigit() or int(job_id) <= 0:
+            return Response(
+                {"error": "Invalid job ID. Job ID must be a positive integer."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
+        # Check if the job offer exists
+        try:
+            job_offer = JobOffer.objects.get(id=job_id)
+        except ObjectDoesNotExist:
+            return Response(
+                {"error": f"Job offer with ID {job_id} does not exist."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Validate related fields: job_category and job_type
+        if not job_offer.job_category:
+            return Response(
+                {"error": "Job offer is missing a valid job category."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if not job_offer.job_type:
+            return Response(
+                {"error": "Job offer is missing a valid job type."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate foreign key relationships
+        if not job_offer.created_by:
+            return Response(
+                {"error": "Job offer is missing a valid creator (user)."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Additional field validations
+        if not job_offer.title or len(job_offer.title.strip()) == 0:
+            return Response(
+                {"error": "Job title cannot be empty."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if not job_offer.location or len(job_offer.location.strip()) == 0:
+            return Response(
+                {"error": "Job location cannot be empty."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate JSON fields: requirements, responsibilities, benefits
+        if not isinstance(job_offer.requirements, list):
+            return Response(
+                {"error": "Invalid format: 'requirements' should be a list."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if not isinstance(job_offer.responsibilities, list):
+            return Response(
+                {"error": "Invalid format: 'responsibilities' should be a list."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if job_offer.benefits and not isinstance(job_offer.benefits, list):
+            return Response(
+                {"error": "Invalid format: 'benefits' should be a list."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate deadline is not in the past (for active or draft jobs)
+        if job_offer.status in ['draft', 'active', 'closed', 'expired']:
+            today = timezone.now().date()
+            if job_offer.deadline < today:
+                return Response(
+                    {"error": "Job offer deadline has passed and cannot be accessed as active or draft."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        # Serialize and return the job offer
+        serializer = JobOfferSerializer(job_offer)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    except ValidationError as ve:
+        return Response({"error": str(ve)}, status=status.HTTP_400_BAD_REQUEST)
+
+    except DatabaseError as de:
+        return Response(
+            {"error": "A database error occurred. Please try again later."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+    except Exception as e:
+        print(f"Unexpected error in get_job_offer_by_id: {str(e)}")  # Debugging log
+        return Response(
+            {"error": "An unexpected error occurred while fetching the job offer."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 
 

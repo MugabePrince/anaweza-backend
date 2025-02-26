@@ -16,6 +16,8 @@ from rest_framework.permissions import AllowAny
 from rest_framework.authentication import BasicAuthentication
 from django.contrib.auth.hashers import check_password
 from django.shortcuts import get_object_or_404
+import random
+import string
 
 
 
@@ -65,18 +67,51 @@ def is_valid_email(email):
 
     return None
 
+
+
+def generate_secure_password():
+    """Generate a secure random password that meets complexity requirements."""
+    lowercase = string.ascii_lowercase
+    uppercase = string.ascii_uppercase
+    digits = string.digits
+    special_chars = "!@#$%^&*(),.?\":{}|<>"
+    
+    # Ensure at least one of each required character type
+    password = [
+        random.choice(lowercase),
+        random.choice(uppercase),
+        random.choice(digits),
+        random.choice(special_chars)
+    ]
+    
+    # Fill remaining length with random characters from all types
+    all_chars = lowercase + uppercase + digits + special_chars
+    password.extend(random.choice(all_chars) for _ in range(4))  # 4 more chars to make it 8 total
+    
+    # Shuffle the password characters
+    random.shuffle(password)
+    return ''.join(password)
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register_user(request):
     phone_number = request.data.get('phone')
     email = request.data.get('email')
     role = request.data.get('role')
-    password = request.data.get('password')
-    confirm_password = request.data.get('confirm_password')
+    is_admin_creating = request.data.get('is_admin_creating', False)  # New field to determine who's creating
+    password = None
+    confirm_password = None
+    
+    if not is_admin_creating:
+        password = request.data.get('password')
+        confirm_password = request.data.get('confirm_password')
 
     # Basic validations
-    if not phone_number or not role:
-        return Response({"error": "Phone number and role are required."}, status=400)
+    if not phone_number:
+        return Response({"error": "Phone number is required."}, status=400)
+    
+    if not role:
+        return Response({"error": "Role is required."}, status=400)
 
     # Check if the phone number already exists
     if CustomUser.objects.filter(phone_number=phone_number).exists():
@@ -90,16 +125,22 @@ def register_user(request):
         if email_error:
             return Response({"error": email_error}, status=400)
 
-    # Validate password complexity
-    password_error = is_valid_password(password)
-    if password_error:
-        return Response({"error": password_error}, status=400)
-
-    # Check if passwords match
-    if password != confirm_password:
-        return Response({"error": "Passwords do not match."}, status=400)
-
     try:
+        if is_admin_creating:
+            # Generate a secure random password for admin-created accounts
+            password = generate_secure_password()
+        else:
+            # Validate user-provided password
+            if not password or not confirm_password:
+                return Response({"error": "Password and confirm password are required."}, status=400)
+            
+            if password != confirm_password:
+                return Response({"error": "Passwords do not match."}, status=400)
+            
+            password_error = is_valid_password(password)
+            if password_error:
+                return Response({"error": password_error}, status=400)
+
         # Hash the password
         hashed_password = make_password(password)
 
@@ -113,18 +154,30 @@ def register_user(request):
 
         # Send the password to the user's email if email is provided
         if email:
+            message = (
+                "Hello,\n\nYour account has been created in ANAWEZA app.\n"
+                f"Your password is: {password}\n\n"
+            )
+            if is_admin_creating:
+                message += "This is a system-generated password. Please change it after your first login."
+            
             send_mail(
                 subject="Your Account Password",
-                message=f"Hello, Your account has been created in ANAWEZA app.\nYour password is: {password}",
+                message=message,
                 from_email="no-reply@anaweza.com",
                 recipient_list=[email],
             )
 
-        return Response({"message": "User registered successfully."}, status=201)
+        response_data = {"message": "User registered successfully."}
+        if is_admin_creating and not email:
+            # If admin is creating account without email, return the generated password
+            response_data["generated_password"] = password
+            response_data["warning"] = "Please securely share this password with the user."
+            
+        return Response(response_data, status=201)
 
     except IntegrityError:
         return Response({"error": "A user with this phone number already exists."}, status=400)
-
 
 
 
@@ -307,20 +360,22 @@ def update_user(request, user_id):
     role = request.data.get('role')
     status = request.data.get('status')
 
+    # Convert status to boolean if it's not already
+    if isinstance(status, str):
+        status = status.lower() == 'true'
+
     # Validate required fields
     if not phone_number or not role:
-        return Response({"message": "Phone number, email, and role are required for updating a user."}, status=400)
+        return Response({"message": "Phone number and role are required for updating a user."}, status=400)
 
     try:
         user = CustomUser.objects.get(id=user_id)
 
-        # Check if the phone number or email already exists, excluding the current user
+        # Check for existing phone number/email
         if CustomUser.objects.filter(phone_number=phone_number).exclude(id=user_id).exists():
-            print("A user with this phone number already exists.")
             return Response({"message": "A user with this phone number already exists."}, status=400)
 
-        if CustomUser.objects.filter(email=email).exclude(id=user_id).exists():
-            print("A user with this email already exists.")
+        if email and CustomUser.objects.filter(email=email).exclude(id=user_id).exists():
             return Response({"message": "A user with this email already exists."}, status=400)
 
         # Update user fields
@@ -328,7 +383,6 @@ def update_user(request, user_id):
         user.email = email
         user.role = role
         user.status = status
-        user.is_active = True
         user.save()
 
         return Response({"message": "User updated successfully."}, status=200)
@@ -337,9 +391,7 @@ def update_user(request, user_id):
         return Response({"message": "User with the given ID does not exist."}, status=404)
 
     except Exception as e:
-        # Catch-all for unexpected errors
         return Response({"message": f"An unexpected error occurred: {str(e)}"}, status=500)
-
     
 
 

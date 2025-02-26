@@ -30,6 +30,7 @@ class JobSeeker(models.Model):
     education_level = models.CharField(max_length=20, choices=EDUCATION_CHOICES, default='none')
     education_sector = models.CharField(max_length=100, blank=True, null=True, help_text="Field of study (if applicable)")
     resume = models.FileField(upload_to='resumes/', blank=True, null=True)
+    salary_range = models.CharField(max_length=50, blank=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='created_job_seekers')
     created_at = models.DateTimeField(default=now)
     status = models.BooleanField(default=False)  # Default to not active
