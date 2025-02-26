@@ -31,6 +31,12 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 # from validate_email_address import validate_email
 from .models import CustomUser
+import re
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from django.core.mail import send_mail
+from .models import CustomUser
+
 
 def is_valid_password(password):
     """Validate password complexity."""
@@ -231,6 +237,7 @@ def login_user(request):
             "role": user.role,
             "status": "Active" if user.status else "Non-Active",
             "created_at": user.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            "profile_picture": user.profile_picture,
             "token": {
                 "refresh": str(refresh),
                 "access": str(refresh.access_token),
@@ -241,21 +248,10 @@ def login_user(request):
         # Log the error securely (don't include sensitive data)
         print(f"Login error: {str(e)}")
         return Response({"detail": "An error occurred during login."}, status=500)
-
-
-
-
-
-
-
-
-
-
-import re
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from django.core.mail import send_mail
-from .models import CustomUser
+    
+    
+    
+    
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -367,6 +363,7 @@ def update_user(request, user_id):
     email = request.data.get('email')
     role = request.data.get('role')
     status = request.data.get('status')
+    profile_picture = request.data.get('profile_picture')  # Get profile picture from request
 
     # Convert status to boolean if it's not already
     if isinstance(status, str):
@@ -391,9 +388,24 @@ def update_user(request, user_id):
         user.email = email
         user.role = role
         user.status = status
+        
+        # Update profile picture if provided
+        if profile_picture is not None:  # Check for None to allow empty string (removing picture)
+            user.profile_picture = profile_picture
+            
         user.save()
 
-        return Response({"message": "User updated successfully."}, status=200)
+        # Return updated user data including the profile picture
+        return Response({
+            "id": user.id,
+            "phone_number": user.phone_number,
+            "email": user.email,
+            "role": user.role,
+            "status": "Active" if user.status else "Non-Active",
+            "created_at": user.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            "profile_picture": user.profile_picture,
+            "message": "User updated successfully."
+        }, status=200)
 
     except ObjectDoesNotExist:
         return Response({"message": "User with the given ID does not exist."}, status=404)
@@ -401,14 +413,14 @@ def update_user(request, user_id):
     except Exception as e:
         return Response({"message": f"An unexpected error occurred: {str(e)}"}, status=500)
     
-
-
+    
+    
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def list_all_users(request):
     # Retrieve all users
     users = CustomUser.objects.all().values(
-        'id', 'phone_number', 'email', 'role', 'status', 'created_at',
+        'id', 'phone_number', 'email', 'role', 'status', 'created_at', 'profile_picture',
     )
 
     # Convert status field to "Active" or "Non-Active"
@@ -423,15 +435,12 @@ def list_all_users(request):
     return Response({"users": formatted_users}, status=200)
 
 
-
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_user_by_id(request, user_id):
     try:
         user = CustomUser.objects.get(id=user_id)
         
-       
         return Response({
             "id": user.id,
             "phone_number": user.phone_number,
@@ -439,10 +448,10 @@ def get_user_by_id(request, user_id):
             "role": user.role,
             "status": "Active" if user.status else "Non-Active",
             "created_at": user.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            "profile_picture": user.profile_picture,
         }, status=200)
     except ObjectDoesNotExist:
         return Response({"error": "User with the given ID does not exist."}, status=404)
-
 
 
 @api_view(['GET'])
@@ -467,7 +476,7 @@ def get_user_by_email(request):
             "role": user.role,
             "status": "Active" if user.status else "Non-Active",
             "created_at": user.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-
+            "profile_picture": user.profile_picture,
         }, status=200)
     except ObjectDoesNotExist:
         return Response({"error": "User with the given email does not exist."}, status=404)
@@ -496,13 +505,13 @@ def get_user_by_phone(request):
             "role": user.role,
             "status": "Active" if user.status else "Non-Active",
             "created_at": user.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-
+            "profile_picture": user.profile_picture,
         }, status=200)
     except ObjectDoesNotExist:
         return Response({"error": "User with the given phone number does not exist."}, status=404)
-
-
-
+    
+    
+    
 
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
