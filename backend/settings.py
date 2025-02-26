@@ -39,7 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    "csp",
+    # "csp",
     'userApp',
     'job_offer_app',
     'job_seeker',
@@ -57,17 +57,17 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    "csp.middleware.CSPMiddleware",
+    # "csp.middleware.CSPMiddleware",
 ]
 
 
 # Define your Content Security Policy
-CSP_DEFAULT_SRC = ["'self'"]
-CSP_SCRIPT_SRC = ["'self'", "'unsafe-inline'", "'blob:'"]
-CSP_STYLE_SRC = ["'self'", "'unsafe-inline'"]
-CSP_IMG_SRC = ["'self'", "data:", "blob:"]
-CSP_FONT_SRC = ["'self'", "data:"]
-CSP_CONNECT_SRC = ["'self'", "http://127.0.0.1:8000", "https://anaweza-backend.up.railway.app"]
+# CSP_DEFAULT_SRC = ["'self'"]
+# CSP_SCRIPT_SRC = ["'self'", "'unsafe-inline'", "'blob:'"]
+# CSP_STYLE_SRC = ["'self'", "'unsafe-inline'"]
+# CSP_IMG_SRC = ["'self'", "data:", "blob:"]
+# CSP_FONT_SRC = ["'self'", "data:"]
+# CSP_CONNECT_SRC = ["'self'", "http://127.0.0.1:8000", "https://anaweza-backend.up.railway.app"]
 
 CORS_ALLOW_ALL_ORIGINS = True
 
