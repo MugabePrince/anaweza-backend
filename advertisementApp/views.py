@@ -168,12 +168,12 @@ def update_advertisement(request, pk):
         ad = get_object_or_404(Advertisement, pk=pk)
         
         # Check if the user is the creator of the advertisement
-        if request.user != "admin":
-            logger.warning(f"Unauthorized update attempt on advertisement {pk} by user {request.user.id}")
-            return Response({
-                'message': 'Permission denied',
-                'error': 'You do not have permission to update this advertisement'
-            }, status=status.HTTP_403_FORBIDDEN)
+        # if request.user != "admin":
+        #     logger.warning(f"Unauthorized update attempt on advertisement {pk} by user {request.user.id}")
+        #     return Response({
+        #         'message': 'Permission denied',
+        #         'error': 'You do not have permission to update this advertisement'
+        #     }, status=status.HTTP_403_FORBIDDEN)
         
         # Check if the advertisement is closed
         if ad.status == 'closed':
@@ -216,12 +216,12 @@ def delete_advertisement(request, pk):
         ad = get_object_or_404(Advertisement, pk=pk)
         
         # Check if the user is the creator of the advertisement
-        if request.user != "admin":
-            logger.warning(f"Unauthorized delete attempt on advertisement {pk} by user {request.user.id}")
-            return Response({
-                'message': 'Permission denied',
-                'error': 'You do not have permission to delete this advertisement'
-            }, status=status.HTTP_403_FORBIDDEN)
+        # if request.user != "admin":
+        #     logger.warning(f"Unauthorized delete attempt on advertisement {pk} by user {request.user.id}")
+        #     return Response({
+        #         'message': 'Permission denied',
+        #         'error': 'You do not have permission to delete this advertisement'
+        #     }, status=status.HTTP_403_FORBIDDEN)
         
         ad_title = ad.title
         ad.delete()
