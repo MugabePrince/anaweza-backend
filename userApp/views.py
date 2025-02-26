@@ -362,16 +362,20 @@ def update_user(request, user_id):
     phone_number = request.data.get('phone_number')
     email = request.data.get('email')
     role = request.data.get('role')
-    status = request.data.get('status')
     profile_picture = request.data.get('profile_picture')  # Get profile picture from request
-
-    # Convert status to boolean if it's not already
-    if isinstance(status, str):
-        status = status.lower() == 'true'
-
+    
+    # Get status from request data
+    status = request.data.get('status')
+    
     # Validate required fields
     if not phone_number or not role:
         return Response({"message": "Phone number and role are required for updating a user."}, status=400)
+    
+    # Handle status properly
+    if status is None:
+        status = True  # Default to True if status is not provided
+    elif isinstance(status, str):
+        status = status.lower() == 'true'
 
     try:
         user = CustomUser.objects.get(id=user_id)
@@ -411,8 +415,7 @@ def update_user(request, user_id):
         return Response({"message": "User with the given ID does not exist."}, status=404)
 
     except Exception as e:
-        return Response({"message": f"An unexpected error occurred: {str(e)}"}, status=500)
-    
+        return Response({"message": f"An unexpected error occurred: {str(e)}"}, status=500) 
     
     
 @api_view(['GET'])
