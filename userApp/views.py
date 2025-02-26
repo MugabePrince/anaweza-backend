@@ -101,10 +101,14 @@ def register_user(request):
     is_admin_creating = request.data.get('is_admin_creating', False)  # New field to determine who's creating
     password = None
     confirm_password = None
+
+
+    
     
     if not is_admin_creating:
+        print(f"\nSubmitted role: {role}\n\n")
         password = request.data.get('password')
-        confirm_password = request.data.get('confirm_password')
+        confirm_password = request.data.get('confirmPassword')
 
     # Basic validations
     if not phone_number:
@@ -131,6 +135,12 @@ def register_user(request):
             password = generate_secure_password()
         else:
             # Validate user-provided password
+            password = request.data.get('password')
+            confirm_password = request.data.get('confirmPassword')
+
+            print(f"\nPassword: {password}\n")
+            print(f"\nCOnfirm Password: {confirm_password}\n")
+            
             if not password or not confirm_password:
                 return Response({"error": "Password and confirm password are required."}, status=400)
             
