@@ -1,6 +1,6 @@
 # Serializers
 from rest_framework import serializers
-from sympy import Q
+
 from .models import Advertisement
 import base64
 from django.utils import timezone
