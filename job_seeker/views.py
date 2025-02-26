@@ -14,54 +14,83 @@ from django.core.exceptions import ValidationError, ObjectDoesNotExist
 def create_job_seeker(request):
     user = request.user
     data = request.data
+    
+    # Print received data for debugging
+    print("Received data:", data)
+    print("Files:", request.FILES)
 
+    # Role validation
     if user.role != 'job_seeker':
         return Response({"error": "Only job seekers can register here"}, status=status.HTTP_403_FORBIDDEN)
 
+    # Duplicate check
     if JobSeeker.objects.filter(user=user).exists():
         return Response({"error": "Job seeker profile already exists"}, status=status.HTTP_400_BAD_REQUEST)
 
-    required_fields = ['first_name', 'last_name', 'gender']
+    # Validate required fields
+    validation_errors = {}
+    required_fields = ['first_name', 'last_name', 'gender', 'salary_range']
     for field in required_fields:
         if not data.get(field):
-            return Response({"error": f"{field} is required"}, status=status.HTTP_400_BAD_REQUEST)
-
+            validation_errors[field] = f"{field} is required"
+    
+    # Experience validation
     try:
-        experience = int(data.get('experience', 0))
-        if experience < 0:
-            return Response({"error": "Experience cannot be negative"}, status=status.HTTP_400_BAD_REQUEST)
+        if 'experience' in data and data['experience']:
+            experience = int(data.get('experience', 0))
+            if experience < 0:
+                validation_errors['experience'] = "Experience cannot be negative"
+        else:
+            experience = 0
     except ValueError:
-        return Response({"error": "Experience must be a valid number"}, status=status.HTTP_400_BAD_REQUEST)
+        validation_errors['experience'] = "Experience must be a valid number"
 
-    skills = data.get('skills', [])
-    if not isinstance(skills, list):
-        return Response({"error": "Skills must be a list"}, status=status.HTTP_400_BAD_REQUEST)
+    # Skills validation
+    skills = data.get('skills', '')
+    # Convert comma-separated string to list if necessary
+    if isinstance(skills, str):
+        skills = [skill.strip() for skill in skills.split(',') if skill.strip()]
+    elif not isinstance(skills, list):
+        validation_errors['skills'] = "Skills must be a comma-separated string or a list"
 
+    # Resume validation
     resume = request.FILES.get('resume', None)
     if resume:
         allowed_extensions = ['pdf', 'doc', 'docx']
         file_extension = resume.name.split('.')[-1].lower()
         if file_extension not in allowed_extensions:
-            return Response({"error": "Resume must be in PDF or DOC format"}, status=status.HTTP_400_BAD_REQUEST)
+            validation_errors['resume'] = "Resume must be in PDF or DOC format"
+    
+    # Return validation errors if any
+    if validation_errors:
+        return Response(validation_errors, status=status.HTTP_400_BAD_REQUEST)
 
-    job_seeker = JobSeeker.objects.create(
-        user=user,
-        first_name=data['first_name'],
-        middle_name=data.get('middle_name', ''),
-        last_name=data['last_name'],
-        gender=data['gender'],
-        skills=skills,
-        salary_range=data['salary_range'],
-        experience=experience,
-        education_level=data.get('education_level', 'none'),
-        education_sector=data.get('education_sector', ''),
-        resume=resume,
-        created_by=user,
-        status=False
-    )
-    serializer = JobSeekerSerializer(job_seeker)
-    return Response(serializer.data, status=status.HTTP_201_CREATED)
+    # Create job seeker profile
+    try:
+        job_seeker = JobSeeker.objects.create(
+            user=user,
+            first_name=data['first_name'],
+            middle_name=data.get('middle_name', ''),
+            last_name=data['last_name'],
+            gender=data['gender'],
+            skills=skills if isinstance(skills, str) else ','.join(skills),
+            salary_range=data.get('salary_range', ''),
+            experience=experience,
+            education_level=data.get('education_level', 'none'),
+            education_sector=data.get('education_sector', ''),
+            resume=resume,
+            created_by=user,
+            status=False
+        )
+        serializer = JobSeekerSerializer(job_seeker)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    except Exception as e:
+        print("Error creating job seeker:", str(e))
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+
+        
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_all_job_seekers(request):
