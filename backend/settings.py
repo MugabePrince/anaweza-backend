@@ -22,11 +22,11 @@ environ.Env.read_env()
 SECRET_KEY = 'django-insecure-&^7qw8hns(vrk^xo!dnbvuqy&@y6@l&7n3plxf&z#x(u2(#z&9'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
+# Make sure these are correctly configured
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'anaweza-backend.up.railway.app', 'anaweza.com']
 CSRF_TRUSTED_ORIGINS = ['https://anaweza-backend.up.railway.app', 'https://anaweza.com']
-
 
 # Application definition
 
@@ -69,7 +69,28 @@ MIDDLEWARE = [
 # CSP_FONT_SRC = ["'self'", "data:"]
 # CSP_CONNECT_SRC = ["'self'", "http://127.0.0.1:8000", "https://anaweza-backend.up.railway.app"]
 
+# CORS configuration
 CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
 
 ROOT_URLCONF = 'backend.urls'

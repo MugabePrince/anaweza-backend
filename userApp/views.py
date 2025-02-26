@@ -186,30 +186,30 @@ def register_user(request):
 @authentication_classes([])
 @permission_classes([AllowAny])
 def login_user(request):
-    email_or_phone = request.data.get('identifier')
+    identifier = request.data.get('identifier')
     password = request.data.get('password')
 
-    print(f"\n Submitted data: \n Email/Phone: {email_or_phone} \n Password: {password} \n")
-
     # Basic validations
-    if not email_or_phone or not password:
-        return Response({"error": "Email/Phone and password are required."}, status=400)
-
-    print(f"\n Submitted data: \n Email/Phone: {email_or_phone} \n Password: {password} \n")
+    if not identifier or not password:
+        return Response({"detail": "Email/Phone and password are required."}, status=400)
 
     try:
-        # Check if user exists by email or phone
-        user = CustomUser.objects.filter(email=email_or_phone).first() or CustomUser.objects.filter(phone_number=email_or_phone).first()
+        # First try email
+        if '@' in identifier:
+            user = CustomUser.objects.filter(email=identifier).first()
+        else:
+            # Then try phone number
+            user = CustomUser.objects.filter(phone_number=identifier).first()
 
         if not user:
-            return Response({"error": "No user found with this email or phone."}, status=401)
+            return Response({"detail": "No user found with this email or phone."}, status=401)
 
-        # Manually check password (since authenticate only works with USERNAME_FIELD)
+        # Check password
         if not check_password(password, user.password):
-            return Response({"error": "Invalid password."}, status=401)
+            return Response({"detail": "Invalid password."}, status=401)
 
         if not user.is_active:
-            return Response({"error": "This account is inactive."}, status=401)
+            return Response({"detail": "This account is inactive."}, status=401)
 
         # Generate JWT token
         refresh = RefreshToken.for_user(user)
@@ -224,15 +224,13 @@ def login_user(request):
             "token": {
                 "refresh": str(refresh),
                 "access": str(refresh.access_token),
-            },
-            "message": "Login successful."
+            }
         }, status=200)
 
     except Exception as e:
+        # Log the error securely (don't include sensitive data)
         print(f"Login error: {str(e)}")
-        return Response({"error": "An error occurred during login."}, status=500)
-
-
+        return Response({"detail": "An error occurred during login."}, status=500)
 
 
 
