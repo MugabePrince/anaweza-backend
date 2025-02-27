@@ -6,7 +6,7 @@ from jobCategoryApp.models import JobCategory, JobType
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
-        fields = ['id', 'phone_number', 'email', 'role', 'status', 'created_at', 'is_active']
+        fields = ['id', 'phone_number', 'email', 'role', 'status', 'created_at', 'profile_picture', 'is_active']
         read_only_fields = ['id', 'created_at', 'is_active']
 
 class JobCategorySerializer(serializers.ModelSerializer):

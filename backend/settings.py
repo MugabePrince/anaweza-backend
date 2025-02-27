@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'job_seeker',
     'jobCategoryApp',
     'advertisementApp',
+    'jobApplication_App',
    
 ]
 
