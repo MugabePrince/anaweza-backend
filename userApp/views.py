@@ -168,6 +168,7 @@ def register_user(request):
             password=password
         )
 
+###################################
         # Send the password to the user's email if email is provided
         if email:
             message = (
