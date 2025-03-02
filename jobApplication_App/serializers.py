@@ -56,7 +56,7 @@ class JobOfferSerializer(serializers.ModelSerializer):
             'id', 'title', 'offer_type', 'company_name',
             'location', 'job_type', 'job_type_id',
             'job_category', 'job_category_id',
-            'experience_level', 'salary_range',
+            'experience_level', 'salary_range', 'employees_needed',
             'description', 'requirements', 'responsibilities',
             'benefits', 'deadline', 'status',
             'created_by', 'created_at', 'updated_at'
@@ -110,80 +110,3 @@ class ApplicationSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['user', 'applied_at', 'updated_at', 'reviewed_by', 'reviewed_at']
     
-    def validate(self, data):
-        request = self.context.get('request')
-        if not request:
-            logger.error("Request not found in serializer context")
-            raise serializers.ValidationError("Server configuration error: Request context missing")
-            
-        user = request.user
-        job_offer = data.get('job_offer')
-        
-        # Log the validation attempt
-        logger.info(f"Validating application for user {user.id} for job offer {job_offer.id if job_offer else 'None'}")
-        
-        # Check if job offer exists
-        if not job_offer:
-            logger.error("Job offer validation failed: Job offer is required")
-            raise serializers.ValidationError({"job_offer_id": "Job offer is required"})
-        
-        # Check if job offer is still open
-        if job_offer.status not in ['active', 'draft']:
-            logger.error(f"Job offer status validation failed: Job offer status is {job_offer.status}")
-            raise serializers.ValidationError({
-                "job_offer_id": f"Cannot apply to a job that is {job_offer.status}"
-            })
-        
-        # Check if deadline has passed
-        current_date = timezone.now().date()
-        if job_offer.deadline < current_date:
-            days_passed = (current_date - job_offer.deadline).days
-            logger.error(f"Deadline validation failed: Deadline passed {days_passed} days ago")
-            raise serializers.ValidationError({
-                "job_offer_id": f"The application deadline for this job has passed {days_passed} days ago"
-            })
-        
-        # Check if user already applied for this job offer
-        if self.instance is None:  # Only check on creation, not update
-            existing_application = Application.objects.filter(user=user, job_offer=job_offer).first()
-            if existing_application:
-                status = existing_application.status
-                logger.error(f"Duplicate application validation failed: User already applied with status '{status}'")
-                raise serializers.ValidationError({
-                    "job_offer_id": f"You have already applied for this job (Status: {status})"
-                })
-        
-        # Check if user has a job seeker profile
-        try:
-            job_seeker = user.job_seeker
-        except JobSeeker.DoesNotExist:
-            logger.error("Job seeker validation failed: User does not have a job seeker profile")
-            raise serializers.ValidationError({
-                "user": "You must complete your job seeker profile before applying"
-            })
-            
-        # Check if resume is provided for jobs requiring it
-        if job_offer.requirements and any("resume" in req.lower() for req in job_offer.requirements):
-            if not self.instance or not self.instance.resume:
-                if not data.get('resume') and not request.FILES.get('resume'):
-                    logger.error("Resume validation failed: Resume required but not provided")
-                    raise serializers.ValidationError({
-                        "resume": "This job requires a resume to apply"
-                    })
-        
-        logger.info(f"Application validation passed for user {user.id} for job offer {job_offer.id}")
-        return data
-    
-    def create(self, validated_data):
-        user = self.context['request'].user
-        
-        # Log the application creation attempt
-        logger.info(f"Creating application for user {user.id} for job offer {validated_data['job_offer'].id}")
-        
-        try:
-            application = Application.objects.create(user=user, **validated_data)
-            logger.info(f"Application created successfully: ID {application.id}")
-            return application
-        except Exception as e:
-            logger.error(f"Failed to create application: {str(e)}")
-            raise serializers.ValidationError(f"Failed to create application: {str(e)}")

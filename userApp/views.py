@@ -165,7 +165,7 @@ def register_user(request):
             phone_number=phone_number,
             email=email,
             role=role,
-            password=hashed_password
+            password=password
         )
 
         # Send the password to the user's email if email is provided
@@ -249,8 +249,7 @@ def login_user(request):
         print(f"Login error: {str(e)}")
         return Response({"detail": "An error occurred during login."}, status=500)
     
-    
-    
+
     
 
 @api_view(['POST'])

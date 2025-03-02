@@ -48,7 +48,7 @@ class JobOfferSerializer(serializers.ModelSerializer):
             'id', 'title', 'offer_type', 'company_name',
             'location', 'job_type', 'job_type_id',
             'job_category', 'job_category_id',
-            'experience_level', 'salary_range',
+            'experience_level', 'salary_range', 'employees_needed',
             'description', 'requirements', 'responsibilities',
             'benefits', 'deadline', 'status',
             'created_by', 'created_at', 'updated_at'

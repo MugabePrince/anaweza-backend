@@ -85,55 +85,42 @@ def create_application(request):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Create the application
+        # Create the application directly without using serializer for validation
         with transaction.atomic():
-            # Create application data dictionary - Fix: Use 'job_offer' as the key for the serializer
-            application_data = {
-                'job_offer': job_offer.id,  # Use 'job_offer' instead of 'job_offer_id'
-                'job_seeker': job_seeker.id
-            }
+            # Create application instance directly
+            application = Application.objects.create(
+                user=request.user,
+                job_offer=job_offer,
+                job_seeker=job_seeker
+            )
             
             # Add optional fields if present
             if 'cover_letter' in request.data:
-                application_data['cover_letter'] = request.data['cover_letter']
+                application.cover_letter = request.data['cover_letter']
                 
             if 'resume' in request.FILES:
-                application_data['resume'] = request.FILES['resume']
+                application.resume = request.FILES['resume']
                 
             if 'additional_documents' in request.data:
-                application_data['additional_documents'] = request.data['additional_documents']
+                application.additional_documents = request.data['additional_documents']
             
-            serializer = ApplicationSerializer(data=application_data, context={'request': request})
-            if serializer.is_valid():
-                application = serializer.save(user=request.user, job_seeker=job_seeker)
-                logger.info(f"Application created successfully: ID {application.id} by user {request.user.id} for job {job_offer_id}")
-                
-                # Return a more detailed success response
-                return Response({
-                    'id': application.id,
-                    'message': 'Application submitted successfully',
-                    'job_title': job_offer.title,
-                    'company': job_offer.company_name or 'Not specified',
-                    'status': application.status,
-                    'applied_at': application.applied_at
-                }, status=status.HTTP_201_CREATED)
-            else:
-                # Format validation errors for better readability
-                error_details = {}
-                for field, errors in serializer.errors.items():
-                    if isinstance(errors, list) and errors:
-                        error_details[field] = errors[0]
-                    else:
-                        error_details[field] = str(errors)
-                
-                error_message = "; ".join([f"{field}: {error}" for field, error in error_details.items()])
-                logger.error(f"Application validation failed: {error_message}")
-                
-                return Response(
-                    {'error': error_message, 'details': serializer.errors},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-                
+            # Save the application with all fields
+            application.save()
+            
+            # Use serializer only for output formatting
+            serializer = ApplicationSerializer(application)
+            
+            # Return a detailed success response
+            return Response({
+                'id': application.id,
+                'message': 'Application submitted successfully',
+                'job_title': job_offer.title,
+                'company': job_offer.company_name or 'Not specified',
+                'status': application.status,
+                'applied_at': application.applied_at
+            }, status=status.HTTP_201_CREATED)
+            
+                 
     except IntegrityError as e:
         error_msg = str(e)
         logger.error(f"Database integrity error: {error_msg}")

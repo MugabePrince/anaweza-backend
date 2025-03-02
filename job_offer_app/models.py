@@ -44,6 +44,7 @@ class JobOffer(models.Model):
     requirements = models.JSONField(default=list)  # List of requirements
     responsibilities = models.JSONField(default=list)  # List of responsibilities
     benefits = models.JSONField(default=list, blank=True)  # List of benefits
+    employees_needed = models.PositiveIntegerField(default=1)
     
     # Dates and Status
     deadline = models.DateField()
