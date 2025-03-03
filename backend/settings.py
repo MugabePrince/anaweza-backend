@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'jobCategoryApp',
     'advertisementApp',
     'jobApplication_App',
+    'testimonialApp',
    
 ]
 
@@ -118,25 +119,25 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.mysql',
-#         'NAME': 'anaweza',
-#         'USER': 'root',
-#         'PASSWORD': '07288',
-#         'HOST': 'localhost',
-#         'PORT': '3306',
-
-#     }
-# }
-
-
-
-
-
 DATABASES = {
-    'default': dj_database_url.parse(env('DATABASE_URL'))
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'anaweza',
+        'USER': 'root',
+        'PASSWORD': '07288',
+        'HOST': 'localhost',
+        'PORT': '3306',
+
+    }
 }
+
+
+
+
+
+# DATABASES = {
+#     'default': dj_database_url.parse(env('DATABASE_URL'))
+# }
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators

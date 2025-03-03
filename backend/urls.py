@@ -10,4 +10,5 @@ urlpatterns = [
     path('category/', include('jobCategoryApp.urls')),
     path('advertisement/', include('advertisementApp.urls')),
     path('application/', include('jobApplication_App.urls')),
+    path('testimony/', include('testimonialApp.urls')),
 ]
