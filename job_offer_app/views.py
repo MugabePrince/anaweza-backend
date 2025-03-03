@@ -198,9 +198,17 @@ def get_job_offer_by_id(request, job_id):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_all_job_offers(request):
-    job_offers = JobOffer.objects.all()
-    serializer = JobOfferSerializer(job_offers, many=True)
-    return Response(serializer.data)
+    try:
+        job_offers = JobOffer.objects.all()
+        serializer = JobOfferSerializer(job_offers, many=True)
+        return Response(serializer.data)
+    except Exception as e:
+        # Log the error for debugging
+        print(f"Error fetching job offers: {str(e)}")
+        return Response(
+            {"error": "An error occurred while fetching job offers."},
+            status=500
+        )
 
 
 
