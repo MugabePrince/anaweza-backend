@@ -13,3 +13,4 @@ urlpatterns = [
     path('created-by-user/', views.get_job_seekers_created_by_user, name='job-seekers-created-by-user'),
     path('by-user/<int:user_id>/', views.get_job_seeker_by_user, name='job-seeker-by-user'),
 ]
+##############
