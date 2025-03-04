@@ -12,5 +12,7 @@ urlpatterns = [
     path('delete/<int:id>/', views.delete_job_seeker, name='delete-job-seeker'),
     path('created-by-user/', views.get_job_seekers_created_by_user, name='job-seekers-created-by-user'),
     path('by-user/<int:user_id>/', views.get_job_seeker_by_user, name='job-seeker-by-user'),
+    path('user/details/', views.get_user_details, name='get_user_details'),
+    path('user/update/', views.update_user_details, name='update_user_details'),
 ]
 ##############

@@ -136,6 +136,7 @@ def get_job_seekers_by_status(request, status_value):
 @permission_classes([IsAuthenticated])
 def update_job_seeker(request, id):
     job_seeker = get_object_or_404(JobSeeker, id=id)
+  
 
     if request.user != job_seeker.user and not request.user.is_superuser:
         return Response({"error": "You are not authorized to update this profile"}, status=status.HTTP_403_FORBIDDEN)
@@ -164,7 +165,7 @@ def get_job_seekers_created_by_user(request):
     serializer = JobSeekerSerializer(job_seekers, many=True)
     return Response(serializer.data)
 
-
+  
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -196,5 +197,82 @@ def get_job_seeker_by_user(request, user_id):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
  
+
+
+
+from rest_framework import status, permissions
+from rest_framework.response import Response
+from rest_framework.decorators import api_view, permission_classes
+
+from job_seeker.models import JobSeeker
+from userApp.models import CustomUser
+from job_seeker.serializers import JobSeekerSerializer
+from .serializers import CustomUserSerializer
+
+
+
+
+from rest_framework import status, permissions
+from rest_framework.response import Response
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.views import APIView
+
+from job_seeker.models import JobSeeker
+from userApp.models import CustomUser
+from job_seeker.serializers import JobSeekerSerializer
+from .serializers import CustomUserSerializer
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def get_user_details(request):
+    try:
+        # Get the logged-in user's job seeker and custom user details
+        user = request.user
+        job_seeker = JobSeeker.objects.get(user=user)
+        
+        # Serialize the data
+        custom_user_serializer = CustomUserSerializer(user)
+        job_seeker_serializer = JobSeekerSerializer(job_seeker)
+        
+        # Combine both user and job seeker data in the response
+        response_data = {
+            'custom_user': custom_user_serializer.data,
+            'job_seeker': job_seeker_serializer.data
+        }
+        return Response(response_data, status=status.HTTP_200_OK)
+    except JobSeeker.DoesNotExist:
+        return Response({'error': 'Job Seeker account does not exist for this user.'}, status=status.HTTP_404_NOT_FOUND)
+
+
+
+@api_view(['PUT'])
+@permission_classes([permissions.IsAuthenticated])
+def update_user_details(request):
+    try:
+        user = request.user
+        job_seeker = JobSeeker.objects.get(user=user)
+
+        # Deserialize the data
+        custom_user_serializer = CustomUserSerializer(user, data=request.data.get('custom_user'), partial=True)
+        job_seeker_serializer = JobSeekerSerializer(job_seeker, data=request.data.get('job_seeker'), partial=True)
+        
+        # Validate both serializers
+        if custom_user_serializer.is_valid() and job_seeker_serializer.is_valid():
+            # Save both models
+            custom_user_serializer.save()
+            job_seeker_serializer.save()
+
+            return Response({
+                'custom_user': custom_user_serializer.data,
+                'job_seeker': job_seeker_serializer.data
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({
+                'custom_user_errors': custom_user_serializer.errors,
+                'job_seeker_errors': job_seeker_serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+    
+    except JobSeeker.DoesNotExist:
+        return Response({'error': 'Job Seeker account does not exist for this user.'}, status=status.HTTP_404_NOT_FOUND)
 
 

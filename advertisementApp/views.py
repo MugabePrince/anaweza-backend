@@ -167,47 +167,35 @@ def update_advertisement(request, pk):
     try:
         ad = get_object_or_404(Advertisement, pk=pk)
         
-        # Check if the user is the creator of the advertisement
-        # if request.user != "admin":
-        #     logger.warning(f"Unauthorized update attempt on advertisement {pk} by user {request.user.id}")
-        #     return Response({
-        #         'message': 'Permission denied',
-        #         'error': 'You do not have permission to update this advertisement'
-        #     }, status=status.HTTP_403_FORBIDDEN)
-        
         # Check if the advertisement is closed
         if ad.status == 'closed':
-            return Response({
-                'message': 'Advertisement is closed',
-                'error': 'Closed advertisements cannot be modified'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            error_message = 'Closed advertisements cannot be modified'
+            logger.warning(f"Attempt to update closed advertisement {pk} by user {request.user.id}")
+            return Response({'message': 'Advertisement is closed', 'error': error_message}, status=status.HTTP_400_BAD_REQUEST)
             
         serializer = AdvertisementSerializer(ad, data=request.data, context={'request': request}, partial=True)
         if serializer.is_valid():
             updated_ad = serializer.save()
             logger.info(f"Advertisement {pk} updated successfully by user {request.user.id}")
-            return Response({
-                'message': 'Advertisement updated successfully',
-                'data': serializer.data
-            }, status=status.HTTP_200_OK)
+            return Response({'message': 'Advertisement updated successfully', 'data': serializer.data}, status=status.HTTP_200_OK)
         else:
-            logger.warning(f"Validation errors in update_advertisement: {serializer.errors}")
-            return Response({
-                'message': 'Failed to update advertisement',
-                'errors': serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
+            error_details = serializer.errors
+            logger.warning(f"Validation errors in update_advertisement: {error_details}")
+            return Response({'message': 'Failed to update advertisement', 'errors': error_details}, status=status.HTTP_400_BAD_REQUEST)
+    
     except Advertisement.DoesNotExist:
+        error_message = f"No advertisement exists with ID {pk}"
         logger.warning(f"Advertisement with ID {pk} not found during update")
-        return Response({
-            'message': 'Advertisement not found',
-            'error': f'No advertisement exists with ID {pk}'
-        }, status=status.HTTP_404_NOT_FOUND)
+        return Response({'message': 'Advertisement not found', 'error': error_message}, status=status.HTTP_404_NOT_FOUND)
+    
     except Exception as e:
-        logger.error(f"Error in update_advertisement: {str(e)}")
-        return Response({
-            'message': 'Failed to update advertisement',
-            'error': str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        error_message = str(e)
+        logger.exception(f"Unexpected error in update_advertisement: {error_message}")
+        return Response({'message': 'Failed to update advertisement', 'error': error_message}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])

@@ -8,7 +8,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
         fields = ['id', 'phone_number', 'email', 'role', 'status',  'created_at', 'profile_picture']
 
 class JobSeekerSerializer(serializers.ModelSerializer):
-    user = CustomUserSerializer(read_only=True)
+    user = CustomUserSerializer()
 
     class Meta:
         model = JobSeeker
