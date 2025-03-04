@@ -1,11 +1,16 @@
-# Serializers
-from rest_framework import serializers
-
-from .models import Advertisement
 import base64
+import logging
+import re
+import datetime
+from io import BytesIO
 from django.utils import timezone
-
+from django.db.models import Q
+from rest_framework import serializers
+from .models import Advertisement
 from userApp.models import CustomUser
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 class CustomUserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -13,46 +18,107 @@ class CustomUserSerializer(serializers.ModelSerializer):
         fields = ['id', 'phone_number', 'email', 'role', 'status', 'created_at', 'is_active']
         read_only_fields = ['id', 'created_at', 'is_active']
 
-
-
-# Updated AdvertisementSerializer with enhanced validation
-from rest_framework import serializers
-from django.db.models import Q
-from .models import Advertisement
-import base64
-from django.utils import timezone
-import re
-import logging
-
-# Set up logging
-logger = logging.getLogger(__name__)
-
 class AdvertisementSerializer(serializers.ModelSerializer):
-    image = serializers.SerializerMethodField()
+    media = serializers.SerializerMethodField()
     created_by = CustomUserSerializer(read_only=True)
+    media_type = serializers.CharField(required=False, write_only=True)
+    # Explicitly declare date fields to handle custom formats
+    start_date = serializers.DateField(required=True, input_formats=['%Y-%m-%d', '%d-%m-%Y', '%m/%d/%Y', '%d/%m/%Y'])
+    end_date = serializers.DateField(required=True, input_formats=['%Y-%m-%d', '%d-%m-%Y', '%m/%d/%Y', '%d/%m/%Y'])
     
     class Meta:
         model = Advertisement
         fields = '__all__'
         
-    def get_image(self, obj):
+    def get_media(self, obj):
         if obj.image:
             try:
-                return base64.b64encode(obj.image).decode('utf-8')
+                media_base64 = base64.b64encode(obj.image).decode('utf-8')
+                # Return media type along with the content
+                media_type = obj.media_type if hasattr(obj, 'media_type') else 'image'
+                return {
+                    'content': media_base64,
+                    'type': media_type
+                }
             except Exception as e:
-                logger.error(f"Error encoding image: {str(e)}")
+                logger.error(f"Error encoding media: {str(e)}")
                 return None
         return None
+    
+
+        
+    def validate_media_content(self, media_data, media_type):
+        """Validate media content based on type and size constraints"""
+        try:
+            # Decode base64 to calculate size
+            decoded_data = base64.b64decode(media_data)
+            size_in_bytes = len(decoded_data)
+            size_in_mb = size_in_bytes / (1024 * 1024)  # Convert to MB
+            
+            # For video: 3 minutes at moderate quality is approximately 30MB max
+            # (this is an estimate - actual size depends on encoding, resolution, etc.)
+            if media_type == 'video':
+                # Max size for a 3-minute video (30MB)
+                max_video_size_mb = 30
+                if size_in_mb > max_video_size_mb:
+                    raise serializers.ValidationError(
+                        f"Video size exceeds maximum allowed ({max_video_size_mb}MB). "
+                        f"Videos must not exceed 3 minutes in length."
+                    )
+                    
+            # For images: 5MB max as a reasonable limit
+            elif media_type == 'image':
+                max_image_size_mb = 5
+                if size_in_mb > max_image_size_mb:
+                    raise serializers.ValidationError(
+                        f"Image size exceeds maximum allowed ({max_image_size_mb}MB)."
+                    )
+                    
+            return decoded_data
+            
+        except Exception as e:
+            logger.error(f"Error validating media content: {str(e)}")
+            raise serializers.ValidationError("Invalid media format. Please provide valid base64 encoded content.")
+    
+    def _try_parse_date(self, date_value):
+        """Helper method to attempt parsing dates in various formats"""
+        if isinstance(date_value, datetime.date):
+            return date_value
+            
+        if not date_value:
+            return None
+            
+        # If it's already a string in ISO format, let DRF handle it
+        if isinstance(date_value, str) and re.match(r'^\d{4}-\d{2}-\d{2}$', date_value):
+            return date_value
+            
+        # Try common formats
+        formats_to_try = ['%Y-%m-%d', '%d-%m-%Y', '%m/%d/%Y', '%d/%m/%Y', '%m-%d-%Y']
+        
+        for date_format in formats_to_try:
+            try:
+                parsed_date = datetime.datetime.strptime(str(date_value), date_format).date()
+                logger.info(f"Successfully parsed date '{date_value}' using format '{date_format}'")
+                return parsed_date
+            except ValueError:
+                continue
+                
+        # If we get here, none of our formats worked
+        logger.warning(f"Could not parse date: {date_value}")
+        return date_value  # Return original to let DRF validation handle it
         
     def create(self, validated_data):
         try:
-            image_data = self.context['request'].data.get('image')
-            if image_data:
-                try:
-                    validated_data['image'] = base64.b64decode(image_data)
-                except Exception as e:
-                    logger.error(f"Error decoding image: {str(e)}")
-                    raise serializers.ValidationError({"image": "Invalid image format. Please provide a valid base64 encoded image."})
+            # Extract and remove media_type from validated data if present
+            media_type = validated_data.pop('media_type', 'image')
+            
+            # Process media data
+            media_data = self.context['request'].data.get('image')
+            if media_data:
+                # Validate and decode the media
+                validated_data['image'] = self.validate_media_content(media_data, media_type)
+                # Store media type in the instance (we'll need to add this field to the model)
+                validated_data['media_type'] = media_type
                     
             validated_data['created_by'] = self.context['request'].user
             return super().create(validated_data)
@@ -62,18 +128,23 @@ class AdvertisementSerializer(serializers.ModelSerializer):
         
     def update(self, instance, validated_data):
         try:
-            image_data = self.context['request'].data.get('image')
-            if image_data:
-                try:
-                    validated_data['image'] = base64.b64decode(image_data)
-                except Exception as e:
-                    logger.error(f"Error decoding image during update: {str(e)}")
-                    raise serializers.ValidationError({"image": "Invalid image format. Please provide a valid base64 encoded image."})
+            # Extract and remove media_type from validated data if present
+            media_type = validated_data.pop('media_type', getattr(instance, 'media_type', 'image'))
+            
+            # Process media data
+            media_data = self.context['request'].data.get('image')
+            if media_data:
+                # Validate and decode the media
+                validated_data['image'] = self.validate_media_content(media_data, media_type)
+                # Update media type
+                validated_data['media_type'] = media_type
+                
             return super().update(instance, validated_data)
         except Exception as e:
             logger.error(f"Error updating advertisement: {str(e)}")
             raise
     
+    # All other validation methods remain the same
     def validate_title(self, value):
         if len(value) < 5:
             raise serializers.ValidationError("Title must be at least 5 characters long.")
@@ -117,6 +188,20 @@ class AdvertisementSerializer(serializers.ModelSerializer):
         if value not in valid_statuses:
             raise serializers.ValidationError(f"Status must be one of: {', '.join(valid_statuses)}")
         return value
+    
+    def validate_start_date(self, value):
+        """Validate and possibly convert start date"""
+        parsed_date = self._try_parse_date(value)
+        if not isinstance(parsed_date, datetime.date):
+            raise serializers.ValidationError("Invalid date format. Use YYYY-MM-DD.")
+        return parsed_date
+        
+    def validate_end_date(self, value):
+        """Validate and possibly convert end date"""
+        parsed_date = self._try_parse_date(value)
+        if not isinstance(parsed_date, datetime.date):
+            raise serializers.ValidationError("Invalid date format. Use YYYY-MM-DD.")
+        return parsed_date
     
     def validate(self, data):
         errors = {}
@@ -204,4 +289,3 @@ class AdvertisementSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(errors)
             
         return data
-
