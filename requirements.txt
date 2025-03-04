@@ -212,7 +212,8 @@ rasterio==1.4.0
 referencing==0.35.1
 regex==2024.5.10
 reportlab==4.2.0
-requests==2.32.3
+requests>=2.27.1,<2.32.3
+
 requests-file==2.0.0
 retina-face==0.0.17
 rfc3339-validator==0.1.4
