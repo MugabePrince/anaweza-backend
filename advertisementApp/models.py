@@ -4,7 +4,7 @@ from userApp.models import CustomUser
 
 class Advertisement(models.Model):
     STATUS_CHOICES = [
-        ('waiting', 'Waiting'),  # Fixed typo from 'waititng'
+        ('waiting', 'Waiting'),
         ('running', 'Running'),
         ('closed', 'Closed')
     ]
