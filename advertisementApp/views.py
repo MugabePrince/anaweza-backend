@@ -1,13 +1,13 @@
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import Advertisement
 from .serializers import AdvertisementSerializer
 from django.core.exceptions import ObjectDoesNotExist
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def get_all_advertisements(request):
     print(f"[INFO] Attempting to fetch all advertisements...")
     try:
@@ -114,7 +114,7 @@ def delete_advertisement(request, pk):
         return Response({'message': 'An error occurred while deleting the advertisement'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def get_advertisements_by_contact(request, contact_info):
     print(f"[INFO] Attempting to fetch advertisements with contact info: {contact_info}")
     try:
