@@ -1,231 +1,130 @@
-# Enhanced views.py
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from django.shortcuts import get_object_or_404
-from django.db.models import Q
-from .serializers import AdvertisementSerializer
+from rest_framework.permissions import IsAuthenticated
 from .models import Advertisement
-import logging
+from .serializers import AdvertisementSerializer
+from django.core.exceptions import ObjectDoesNotExist
 
-# Set up logging
-logger = logging.getLogger(__name__)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_all_advertisements(request):
+    print(f"[INFO] Attempting to fetch all advertisements...")
+    try:
+        ads = Advertisement.objects.all()
+        print(f"[INFO] Successfully retrieved {ads.count()} advertisements")
+        serializer = AdvertisementSerializer(ads, many=True, context={'request': request})
+        print(f"[INFO] Serialized all advertisements data")
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Exception as e:
+        print(f"[ERROR] Error fetching advertisements: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response({'message': 'An error occurred while fetching advertisements'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_advertisement_by_id(request, pk):
+    print(f"[INFO] Attempting to fetch advertisement with ID: {pk}")
+    try:
+        ad = Advertisement.objects.get(pk=pk)
+        print(f"[INFO] Successfully retrieved advertisement with ID: {pk}")
+        serializer = AdvertisementSerializer(ad, context={'request': request})
+        print(f"[INFO] Serialized advertisement data")
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except ObjectDoesNotExist:
+        print(f"[WARNING] Advertisement with ID {pk} not found")
+        return Response({'message': 'Advertisement not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        print(f"[ERROR] Error fetching advertisement: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response({'message': 'An error occurred'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_advertisement(request):
+    print(f"[INFO] Attempting to create new advertisement by user: {request.user.id}")
     try:
-        logger.info(f"Creating advertisement by user {request.user.id}")
+        # Basic user check - cannot be removed from backend
+        if not request.user.is_active:
+            print(f"[WARNING] User {request.user.id} is not active. Create advertisement denied.")
+            return Response({'message': 'Your account is not active'}, status=status.HTTP_403_FORBIDDEN)
+        
+        print(f"[INFO] Validating advertisement data...")
         serializer = AdvertisementSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
+            print(f"[INFO] Advertisement data valid. Creating advertisement...")
             ad = serializer.save()
-            logger.info(f"Advertisement created successfully with ID {ad.id}")
-            return Response({
-                'message': 'Advertisement created successfully',
-                'data': serializer.data
-            }, status=status.HTTP_201_CREATED)
-        else:
-            logger.warning(f"Validation errors in create_advertisement: {serializer.errors}")
-            return Response({
-                'message': 'Failed to create advertisement',
-                'errors': serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
+            print(f"[INFO] Successfully created advertisement with ID: {ad.id}")
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        
+        print(f"[WARNING] Invalid advertisement data: {serializer.errors}")
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
-        logger.error(f"Error in create_advertisement: {str(e)}")
-        return Response({
-            'message': 'An unexpected error occurred',
-            'error': str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def get_all_advertisements(request):
-    try:
-        # Add filtering options
-        status_filter = request.query_params.get('status', None)
-        created_by = request.query_params.get('created_by', None)
-        
-        ads = Advertisement.objects.all()
-        
-        if status_filter:
-            ads = ads.filter(status=status_filter)
-            
-        if created_by:
-            ads = ads.filter(created_by_id=created_by)
-        
-        # Check for date range filters
-        start_after = request.query_params.get('start_after', None)
-        end_before = request.query_params.get('end_before', None)
-        
-        if start_after:
-            ads = ads.filter(start_date__gte=start_after)
-            
-        if end_before:
-            ads = ads.filter(end_date__lte=end_before)
-            
-        # Filter by active status by default (exclude closed advertisements)
-        include_closed = request.query_params.get('include_closed', 'false').lower() == 'true'
-        if not include_closed:
-            ads = ads.exclude(status='closed')
-            
-        # Add search functionality
-        search_query = request.query_params.get('search', None)
-        if search_query:
-            ads = ads.filter(
-                Q(title__icontains=search_query) |
-                Q(description__icontains=search_query)
-            )
-            
-        # Order results
-        order_by = request.query_params.get('order_by', '-created_at')  # Default: newest first
-        ads = ads.order_by(order_by)
-        
-        # Basic pagination
-        page = int(request.query_params.get('page', 1))
-        page_size = int(request.query_params.get('page_size', 10))
-        start_index = (page - 1) * page_size
-        end_index = start_index + page_size
-        
-        total_count = ads.count()
-        ads = ads[start_index:end_index]
-        
-        serializer = AdvertisementSerializer(ads, many=True, context={'request': request})
-        
-        return Response({
-            'message': 'Advertisements retrieved successfully',
-            'count': total_count,
-            'page': page,
-            'page_size': page_size,
-            'total_pages': (total_count + page_size - 1) // page_size,
-            'data': serializer.data
-        }, status=status.HTTP_200_OK)
-    except Exception as e:
-        logger.error(f"Error in get_all_advertisements: {str(e)}")
-        return Response({
-            'message': 'Failed to retrieve advertisements',
-            'error': str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def get_advertisement_by_id(request, pk):
-    try:
-        ad = get_object_or_404(Advertisement, pk=pk)
-        serializer = AdvertisementSerializer(ad, context={'request': request})
-        return Response({
-            'message': 'Advertisement retrieved successfully',
-            'data': serializer.data
-        }, status=status.HTTP_200_OK)
-    except Advertisement.DoesNotExist:
-        logger.warning(f"Advertisement with ID {pk} not found")
-        return Response({
-            'message': 'Advertisement not found',
-            'error': f'No advertisement exists with ID {pk}'
-        }, status=status.HTTP_404_NOT_FOUND)
-    except Exception as e:
-        logger.error(f"Error in get_advertisement_by_id: {str(e)}")
-        return Response({
-            'message': 'Failed to retrieve advertisement',
-            'error': str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def get_advertisement_by_contact(request, contact_info):
-    try:
-        if not contact_info:
-            return Response({
-                'message': 'Contact information is required',
-                'error': 'Please provide contact information'
-            }, status=status.HTTP_400_BAD_REQUEST)
-            
-        ads = Advertisement.objects.filter(contact_info=contact_info)
-        
-        if not ads.exists():
-            return Response({
-                'message': 'No advertisements found',
-                'error': f'No advertisements found with contact info: {contact_info}'
-            }, status=status.HTTP_404_NOT_FOUND)
-            
-        serializer = AdvertisementSerializer(ads, many=True, context={'request': request})
-        return Response({
-            'message': 'Advertisements retrieved successfully',
-            'count': ads.count(),
-            'data': serializer.data
-        }, status=status.HTTP_200_OK)
-    except Exception as e:
-        logger.error(f"Error in get_advertisement_by_contact: {str(e)}")
-        return Response({
-            'message': 'Failed to retrieve advertisements',
-            'error': str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        print(f"[ERROR] Error creating advertisement: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response({'message': 'An error occurred while creating the advertisement'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def update_advertisement(request, pk):
+    print(f"[INFO] Attempting to update advertisement with ID: {pk}")
     try:
-        ad = get_object_or_404(Advertisement, pk=pk)
-        
-        # Check if the advertisement is closed
-        if ad.status == 'closed':
-            error_message = 'Closed advertisements cannot be modified'
-            logger.warning(f"Attempt to update closed advertisement {pk} by user {request.user.id}")
-            return Response({'message': 'Advertisement is closed', 'error': error_message}, status=status.HTTP_400_BAD_REQUEST)
-            
-        serializer = AdvertisementSerializer(ad, data=request.data, context={'request': request}, partial=True)
+        print(f"[INFO] Checking if advertisement with ID {pk} exists...")
+        ad = Advertisement.objects.get(pk=pk)
+        print(f"[INFO] Advertisement found. Validating update data...")
+        serializer = AdvertisementSerializer(ad, data=request.data, partial=True, context={'request': request})
         if serializer.is_valid():
+            print(f"[INFO] Update data valid. Saving changes...")
             updated_ad = serializer.save()
-            logger.info(f"Advertisement {pk} updated successfully by user {request.user.id}")
-            return Response({'message': 'Advertisement updated successfully', 'data': serializer.data}, status=status.HTTP_200_OK)
-        else:
-            error_details = serializer.errors
-            logger.warning(f"Validation errors in update_advertisement: {error_details}")
-            return Response({'message': 'Failed to update advertisement', 'errors': error_details}, status=status.HTTP_400_BAD_REQUEST)
-    
-    except Advertisement.DoesNotExist:
-        error_message = f"No advertisement exists with ID {pk}"
-        logger.warning(f"Advertisement with ID {pk} not found during update")
-        return Response({'message': 'Advertisement not found', 'error': error_message}, status=status.HTTP_404_NOT_FOUND)
-    
+            print(f"[INFO] Successfully updated advertisement with ID: {pk}")
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        print(f"[WARNING] Invalid update data: {serializer.errors}")
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except ObjectDoesNotExist:
+        print(f"[WARNING] Advertisement with ID {pk} not found")
+        return Response({'message': 'Advertisement not found'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
-        error_message = str(e)
-        logger.exception(f"Unexpected error in update_advertisement: {error_message}")
-        return Response({'message': 'Failed to update advertisement', 'error': error_message}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-
-
+        print(f"[ERROR] Error updating advertisement: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response({'message': 'An error occurred while updating the advertisement'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_advertisement(request, pk):
+    print(f"[INFO] Attempting to delete advertisement with ID: {pk}")
     try:
-        ad = get_object_or_404(Advertisement, pk=pk)
-        
-        # Check if the user is the creator of the advertisement
-        # if request.user != "admin":
-        #     logger.warning(f"Unauthorized delete attempt on advertisement {pk} by user {request.user.id}")
-        #     return Response({
-        #         'message': 'Permission denied',
-        #         'error': 'You do not have permission to delete this advertisement'
-        #     }, status=status.HTTP_403_FORBIDDEN)
-        
-        ad_title = ad.title
+        print(f"[INFO] Checking if advertisement with ID {pk} exists...")
+        ad = Advertisement.objects.get(pk=pk)
+        print(f"[INFO] Advertisement found. Proceeding with deletion...")
         ad.delete()
-        logger.info(f"Advertisement {pk} '{ad_title}' deleted successfully by user {request.user.id}")
-        return Response({
-            'message': f"Advertisement '{ad_title}' deleted successfully"
-        }, status=status.HTTP_204_NO_CONTENT)
-    except Advertisement.DoesNotExist:
-        logger.warning(f"Advertisement with ID {pk} not found during delete")
-        return Response({
-            'message': 'Advertisement not found',
-            'error': f'No advertisement exists with ID {pk}'
-        }, status=status.HTTP_404_NOT_FOUND)
+        print(f"[INFO] Successfully deleted advertisement with ID: {pk}")
+        return Response({'message': 'Advertisement deleted successfully'}, status=status.HTTP_200_OK)
+    except ObjectDoesNotExist:
+        print(f"[WARNING] Advertisement with ID {pk} not found")
+        return Response({'message': 'Advertisement not found'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
-        logger.error(f"Error in delete_advertisement: {str(e)}")
-        return Response({
-            'message': 'Failed to delete advertisement',
-            'error': str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        print(f"[ERROR] Error deleting advertisement: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response({'message': 'An error occurred while deleting the advertisement'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_advertisements_by_contact(request, contact_info):
+    print(f"[INFO] Attempting to fetch advertisements with contact info: {contact_info}")
+    try:
+        ads = Advertisement.objects.filter(contact_info__iexact=contact_info)
+        print(f"[INFO] Successfully retrieved {ads.count()} advertisements with matching contact info")
+        serializer = AdvertisementSerializer(ads, many=True, context={'request': request})
+        print(f"[INFO] Serialized all matching advertisements data")
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Exception as e:
+        print(f"[ERROR] Error fetching advertisements by contact: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response({'message': 'An error occurred while fetching advertisements'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

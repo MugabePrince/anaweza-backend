@@ -15,4 +15,3 @@ urlpatterns = [
     path('user/details/', views.get_user_details, name='get_user_details'),
     path('user/update/', views.update_user_details, name='update_user_details'),
 ]
-##############
