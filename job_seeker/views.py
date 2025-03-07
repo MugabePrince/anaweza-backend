@@ -258,8 +258,8 @@ def get_user_details(request):
         custom_user_serializer = CustomUserSerializer(user)
         job_seeker_serializer = JobSeekerSerializer(job_seeker)
         
-        print(f"\n\n Retrived  custom user data: {custom_user_serializer}\n\n")
-        print(f"\n\n Retrived job seeker data: {job_seeker_serializer}\n\n")
+        print(f"\n\n Retrived  custom user data: {custom_user_serializer.data}\n\n")
+        print(f"\n\n Retrived job seeker data: {job_seeker_serializer.data}\n\n")
         
         # Combine both user and job seeker data in the response
         response_data = {
@@ -283,8 +283,8 @@ def update_user_details(request):
         custom_user_serializer = CustomUserSerializer(user, data=request.data.get('custom_user'), partial=True)
         job_seeker_serializer = JobSeekerSerializer(job_seeker, data=request.data.get('job_seeker'), partial=True)
         
-        print(f"\n\n Submitted  custom user data: {custom_user_serializer}\n\n")
-        print(f"\n\n Submitted job seeker data: {job_seeker_serializer}\n\n")
+        print(f"\n\n Submitted  custom user data: {custom_user_serializer.data}\n\n")
+        print(f"\n\n Submitted job seeker data: {job_seeker_serializer.data}\n\n")
         
         
         # Validate both serializers
