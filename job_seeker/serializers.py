@@ -7,7 +7,11 @@ class CustomUserSerializer(serializers.ModelSerializer):
         model = CustomUser
         fields = ['id', 'phone_number', 'email', 'role', 'status', 'created_at', 'profile_picture']
 
+
 class JobSeekerSerializer(serializers.ModelSerializer):
+    # Include the related CustomUser data
+    custom_user = CustomUserSerializer(source='user', read_only=True)
+
     class Meta:
         model = JobSeeker
-        exclude = ['user']  # Exclude user from validation as we're handling it separately
+        exclude = ['user']
