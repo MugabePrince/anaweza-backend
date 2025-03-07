@@ -14,6 +14,7 @@ class JobSeeker(models.Model):
         ('none', 'No Formal Education'),
         ('primary', 'Primary Education'),
         ('ordinary_level', 'Ordinary Level'),
+        ('advanced_diploma', 'Advanced Diploma'),
         ('secondary', 'Secondary Education'),
         ('vocational', 'Vocational Training'),
         ('bachelor', 'Bachelor\'s Degree'),
@@ -36,7 +37,9 @@ class JobSeeker(models.Model):
     renewal_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='created_job_seekers')
     created_at = models.DateTimeField(default=now)
-    status = models.BooleanField(default=False)  # Default to not active
+    status = models.BooleanField(default=False)
+    District = models.CharField(max_length=30, default='', blank=True, null=True)
+    sector = models.CharField(max_length=30, default='', blank=True, null=True)
     
     def __str__(self):
         return f"{self.first_name} {self.last_name} ({self.user.phone_number})"

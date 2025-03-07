@@ -19,10 +19,7 @@ def create_job_seeker(request):
     print("Received data:", data)
     print("Files:", request.FILES)
 
-    # Role validation
-    # if user.role != 'job_seeker':
-    #     return Response({"error": "Only job seekers can register here"}, status=status.HTTP_403_FORBIDDEN)
-
+ 
     # Duplicate check
     if JobSeeker.objects.filter(user=user).exists():
         return Response({"error": "Job seeker profile already exists"}, status=status.HTTP_400_BAD_REQUEST)
