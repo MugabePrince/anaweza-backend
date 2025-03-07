@@ -104,7 +104,7 @@ def register_user(request):
     phone_number = request.data.get('phone')
     email = request.data.get('email')
     role = request.data.get('role')
-    is_admin_creating = request.data.get('is_admin_creating', False)  # New field to determine who's creating
+    is_admin_creating = request.data.get('is_admin_creating', True)  # New field to determine who's creating
     password = None
     confirm_password = None
 
