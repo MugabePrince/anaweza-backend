@@ -38,7 +38,7 @@ class JobSeeker(models.Model):
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='created_job_seekers')
     created_at = models.DateTimeField(default=now)
     status = models.BooleanField(default=False)
-    District = models.CharField(max_length=30, default='', blank=True, null=True)
+    district = models.CharField(max_length=30, default='', blank=True, null=True)
     sector = models.CharField(max_length=30, default='', blank=True, null=True)
     
     def __str__(self):
