@@ -25,13 +25,22 @@ def create_application(request):
         # Check if the user has a job seeker profile
         try:
             job_seeker = JobSeeker.objects.get(user=request.user)
+            
+            # Check if job seeker status is active
+            if not job_seeker.status:
+                logger.error(f"User {request.user.id} has an inactive job seeker profile")
+                return Response(
+                    {'error': 'Only active job seekers can apply for jobs'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+                
         except JobSeeker.DoesNotExist:
             logger.error(f"User {request.user.id} does not have a job seeker profile")
             return Response(
                 {'error': 'You must complete your job seeker profile before applying'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+            
         # Validate job offer ID - Check both job_offer and job_offer_id fields
         job_offer_id = request.data.get('job_offer') or request.data.get('job_offer_id')
         print(f"\n\n Submitted Job Offer ID: {job_offer_id}\n\n")
@@ -139,8 +148,6 @@ def create_application(request):
             {'error': 'An unexpected error occurred'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
-
-
 
 
 
