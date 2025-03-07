@@ -13,6 +13,7 @@ class JobSeeker(models.Model):
     EDUCATION_CHOICES = [
         ('none', 'No Formal Education'),
         ('primary', 'Primary Education'),
+        ('ordinary_level', 'Ordinary Level'),
         ('secondary', 'Secondary Education'),
         ('vocational', 'Vocational Training'),
         ('bachelor', 'Bachelor\'s Degree'),
