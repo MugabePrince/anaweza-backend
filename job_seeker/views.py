@@ -94,7 +94,9 @@ def create_job_seeker(request):
             registration_fee=registration_fee,
             renewal_fee=renewal_fee,
             created_by=user,
-            status=False
+            status=False,
+            district=data.get['district'],
+            sector=data.get['sector']
         )
         serializer = JobSeekerSerializer(job_seeker)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -126,6 +128,8 @@ def get_job_seeker_by_phone(request, phone_number):
     job_seeker = get_object_or_404(JobSeeker, user=user)
     serializer = JobSeekerSerializer(job_seeker)
     return Response(serializer.data)
+
+
 
 @api_view(['GET'])
 def get_job_seeker_by_email(request, email):
@@ -193,6 +197,10 @@ def get_job_seeker_by_user(request, user_id):
 
         # Then try to get job seeker profile
         job_seeker = JobSeeker.objects.get(user=user)
+        
+ 
+        print(f"\n\n Retrived job seeker data: {job_seeker}\n\n")
+        
         serializer = JobSeekerSerializer(job_seeker)
         return Response(serializer.data)
     
@@ -250,6 +258,9 @@ def get_user_details(request):
         custom_user_serializer = CustomUserSerializer(user)
         job_seeker_serializer = JobSeekerSerializer(job_seeker)
         
+        print(f"\n\n Retrived  custom user data: {custom_user_serializer}\n\n")
+        print(f"\n\n Retrived job seeker data: {job_seeker_serializer}\n\n")
+        
         # Combine both user and job seeker data in the response
         response_data = {
             'custom_user': custom_user_serializer.data,
@@ -271,6 +282,10 @@ def update_user_details(request):
         # Deserialize the data
         custom_user_serializer = CustomUserSerializer(user, data=request.data.get('custom_user'), partial=True)
         job_seeker_serializer = JobSeekerSerializer(job_seeker, data=request.data.get('job_seeker'), partial=True)
+        
+        print(f"\n\n Submitted  custom user data: {custom_user_serializer}\n\n")
+        print(f"\n\n Submitted job seeker data: {job_seeker_serializer}\n\n")
+        
         
         # Validate both serializers
         if custom_user_serializer.is_valid() and job_seeker_serializer.is_valid():
