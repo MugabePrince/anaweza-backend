@@ -14,6 +14,23 @@ from .serializers import ApplicationSerializer
 # Set up logger
 logger = logging.getLogger(__name__)
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.response import Response
+from rest_framework import status
+from django.db import transaction, IntegrityError
+from django.utils import timezone
+import logging
+import re
+
+from job_seeker.models import JobSeeker
+from job_offer_app.models import JobOffer
+from .models import Application
+from .serializers import ApplicationSerializer
+
+# Set up logger
+logger = logging.getLogger(__name__)
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_application(request):
@@ -93,6 +110,31 @@ def create_application(request):
                 {'error': f"You have already applied for this job (Status: {existing_application.status})"},
                 status=status.HTTP_400_BAD_REQUEST
             )
+            
+        # NEW VALIDATION: Check salary range compatibility
+        if job_offer.salary_range and job_seeker.salary_range:
+            try:
+                # Extract and compare salary ranges
+                logger.info(f"Comparing salary ranges - Job offer: {job_offer.salary_range}, Job seeker: {job_seeker.salary_range}")
+                
+                # Parse job offer salary range
+                offer_min, offer_max = _parse_salary_range(job_offer.salary_range)
+                
+                # Parse job seeker salary range
+                seeker_min, seeker_max = _parse_salary_range(job_seeker.salary_range)
+                
+                logger.info(f"Parsed salary ranges - Job offer: {offer_min}-{offer_max}, Job seeker: {seeker_min}-{seeker_max}")
+                
+                # Check if job offer salary is higher than job seeker's expected range
+                if offer_min > seeker_max:
+                    logger.error(f"Salary range mismatch: Job offer min ({offer_min}) exceeds job seeker's max ({seeker_max})")
+                    return Response(
+                        {'error': f"This job's salary range ({job_offer.salary_range}) exceeds your expected salary range ({job_seeker.salary_range})"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            except (ValueError, TypeError) as e:
+                # Log the error but don't block the application if there's an issue parsing the salary ranges
+                logger.warning(f"Error comparing salary ranges: {str(e)}. Job offer: {job_offer.salary_range}, Job seeker: {job_seeker.salary_range}")
         
         # Create the application directly without using serializer for validation
         with transaction.atomic():
@@ -149,6 +191,73 @@ def create_application(request):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
+
+def _parse_salary_range(salary_range_str):
+    """
+    Parse a salary range string into minimum and maximum values.
+    
+    Handles various formats:
+    - Fixed number: "1000", "1,000"
+    - Range with hyphen: "1000-2000", "1,000-100,000"
+    - Range with currency: "1000 frw", "1,000 frw - 100,000 frw"
+    - Mixed formats: "1000 - 100,000", "1,000frw-100,000frw"
+    
+    Returns:
+    tuple: (min_value, max_value) as floats
+    """
+    if not salary_range_str:
+        return (0, float('inf'))
+    
+    # Convert to lowercase for consistent processing
+    salary_str = salary_range_str.lower().strip()
+    
+    # Step 1: Remove all currency indicators (frw, $, €, £, etc.)
+    currency_patterns = ['frw', 'rwf', 'usd', '$', '€', '£', 'dollar', 'euros', 'pounds']
+    for pattern in currency_patterns:
+        salary_str = salary_str.replace(pattern, '')
+    
+    # Step 2: Remove all spaces
+    salary_str = salary_str.replace(' ', '')
+    
+    # Step 3: Remove all commas in numbers
+    salary_str = salary_str.replace(',', '')
+    
+    # Step 4: Check if it's a range (contains hyphen or dash)
+    if '-' in salary_str:
+        try:
+            # Split by hyphen
+            parts = salary_str.split('-')
+            
+            # Extract min and max values
+            min_str = parts[0].strip()
+            max_str = parts[1].strip()
+            
+            # Convert to float
+            min_value = float(min_str) if min_str else 0
+            max_value = float(max_str) if max_str else float('inf')
+            
+            return (min_value, max_value)
+        except (ValueError, IndexError) as e:
+            logger.warning(f"Error parsing salary range with hyphen: {salary_range_str}, error: {str(e)}")
+            # Fall back to using regex for more complex cases
+    
+    # Step 5: If not a clear range or the above parsing failed, try regex to extract numbers
+    number_pattern = r'\d+\.?\d*'
+    numbers = re.findall(number_pattern, salary_str)
+    
+    if len(numbers) == 0:
+        # No numbers found, return default
+        logger.warning(f"No numbers found in salary string: {salary_range_str}")
+        return (0, float('inf'))
+    elif len(numbers) == 1:
+        # Single number - use as min and max
+        value = float(numbers[0])
+        return (value, value)
+    else:
+        # Multiple numbers - assume first is min, last is max
+        min_value = float(numbers[0])
+        max_value = float(numbers[-1])
+        return (min_value, max_value)
 
 
 @api_view(['GET'])
