@@ -95,8 +95,8 @@ def create_job_seeker(request):
             renewal_fee=renewal_fee,
             created_by=user,
             status=False,
-            district=data.get['district'],
-            sector=data.get['sector']
+            District=data.get('district', ''),
+            sector=data.get('sector', '')
         )
         serializer = JobSeekerSerializer(job_seeker)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
