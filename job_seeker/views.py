@@ -271,7 +271,6 @@ def get_user_details(request):
         return Response({'error': 'Job Seeker account does not exist for this user.'}, status=status.HTTP_404_NOT_FOUND)
 
 
-
 @api_view(['PUT'])
 @permission_classes([permissions.IsAuthenticated])
 def update_user_details(request):
@@ -279,31 +278,46 @@ def update_user_details(request):
         user = request.user
         job_seeker = JobSeeker.objects.get(user=user)
 
-        # Deserialize the data
-        custom_user_serializer = CustomUserSerializer(user, data=request.data.get('custom_user'), partial=True)
-        job_seeker_serializer = JobSeekerSerializer(job_seeker, data=request.data.get('job_seeker'), partial=True)
+        # Get the data from request
+        custom_user_data = request.data.get('custom_user', {})
+        job_seeker_data = request.data.get('job_seeker', {})
         
-        print(f"\n\n Submitted  custom user data: {custom_user_serializer.data}\n\n")
-        print(f"\n\n Submitted job seeker data: {job_seeker_serializer.data}\n\n")
+        # Log the received data for debugging
+        print(f"\n\n Submitted custom user data: {custom_user_data}\n\n")
+        print(f"\n\n Submitted job seeker data: {job_seeker_data}\n\n")
         
+        # Create serializers with the data
+        custom_user_serializer = CustomUserSerializer(user, data=custom_user_data, partial=True)
+        job_seeker_serializer = JobSeekerSerializer(job_seeker, data=job_seeker_data, partial=True)
         
-        # Validate both serializers
-        if custom_user_serializer.is_valid() and job_seeker_serializer.is_valid():
-            # Save both models
+        # Validate the data
+        custom_user_valid = custom_user_serializer.is_valid()
+        job_seeker_valid = job_seeker_serializer.is_valid()
+        
+        # Check if both are valid
+        if custom_user_valid and job_seeker_valid:
+            # Save the changes
             custom_user_serializer.save()
             job_seeker_serializer.save()
-
+            
+            # Return the updated data
             return Response({
-                'custom_user': custom_user_serializer.data,
-                'job_seeker': job_seeker_serializer.data
+                'custom_user': CustomUserSerializer(user).data,
+                'job_seeker': JobSeekerSerializer(job_seeker).data
             }, status=status.HTTP_200_OK)
         else:
-            return Response({
-                'custom_user_errors': custom_user_serializer.errors,
-                'job_seeker_errors': job_seeker_serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
+            # Return validation errors
+            errors = {}
+            if not custom_user_valid:
+                errors['custom_user_errors'] = custom_user_serializer.errors
+            if not job_seeker_valid:
+                errors['job_seeker_errors'] = job_seeker_serializer.errors
+                
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
     
     except JobSeeker.DoesNotExist:
         return Response({'error': 'Job Seeker account does not exist for this user.'}, status=status.HTTP_404_NOT_FOUND)
-
-
+    except Exception as e:
+        # Log the error and return a 500 response
+        print(f"Error updating user details: {str(e)}")
+        return Response({'error': 'An unexpected error occurred.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

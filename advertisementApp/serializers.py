@@ -79,4 +79,54 @@ class AdvertisementSerializer(serializers.ModelSerializer):
             print(f"Error updating advertisement: {str(e)}")
             raise
     
-   
+    def validate(self, data):
+        # Only keep critical validations that must be handled server-side
+        errors = {}
+        
+        # Check for duplicate advertisements
+        if self.context.get('request') and hasattr(self.context['request'], 'user'):
+            user = self.context['request'].user
+            
+            # Only perform duplicate check if title, description and contact_info are all provided
+            if all(k in data for k in ['title', 'description', 'contact_info']):
+                title = data.get('title')
+                description = data.get('description')
+                contact_info = data.get('contact_info')
+                
+                try:
+                    if self.instance:  # Update operation
+                        existing = Advertisement.objects.filter(
+                            Q(title=title) & 
+                            Q(description=description) & 
+                            Q(contact_info=contact_info) &
+                            Q(created_by=user)
+                        ).exclude(pk=self.instance.pk).exists()
+                        
+                        if existing:
+                            errors['duplicate'] = "A similar advertisement already exists."
+                    else:  # Create operation
+                        existing = Advertisement.objects.filter(
+                            Q(title=title) & 
+                            Q(description=description) & 
+                            Q(contact_info=contact_info) &
+                            Q(created_by=user)
+                        ).exists()
+                        
+                        if existing:
+                            errors['duplicate'] = "A similar advertisement already exists."
+                except Exception as e:
+                    print(f"Error checking for duplicates: {str(e)}")
+        
+        # Minimal date validation - just ensure end_date is after start_date
+        # Other date validations moved to frontend
+        start_date = data.get('start_date')
+        end_date = data.get('end_date')
+        
+        if start_date and end_date and start_date > end_date:
+            errors['date_range'] = "End date must be after start date."
+        
+        if errors:
+            print(f"Validation errors for advertisement: {errors}")
+            raise serializers.ValidationError(errors)
+            
+        return data
