@@ -52,6 +52,27 @@ def is_valid_password(password):
         return "Password must include at least one special character (!@#$%^&* etc.)."
     return None
 
+def is_valid_email(email):
+    """Validate email format and domain."""
+    email_regex = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
+
+    # Check format
+    if not re.match(email_regex, email):
+        return "Invalid email format."
+
+    # Check domain validity (avoiding scam emails)
+    # if not validate_email(email, verify=True):
+    #     return "Invalid email address. Please use a real email."
+
+    # (Optional) Only allow Gmail addresses to avoid scammers
+    #
+
+    #check if entered password has been used before
+    if not email.endswith("@gmail.com"):
+        return "Only Gmail addresses are allowed for registration."
+
+    return None
+
 
 
 def generate_secure_password():
