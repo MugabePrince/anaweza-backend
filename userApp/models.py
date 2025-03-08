@@ -3,7 +3,7 @@ from django.db import models
 from django.utils.timezone import now
 
 class CustomUserManager(BaseUserManager):
-    def create_user(self, phone_number, role, email=None, password=None, status=False, profile_picture=None):
+    def create_user(self, phone_number, role, email=None, password=None, status=True, profile_picture=None):
         if not phone_number:
             raise ValueError("The phone number must be provided")
         if not role:
