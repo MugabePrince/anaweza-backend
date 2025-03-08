@@ -10,7 +10,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
 
 class JobSeekerSerializer(serializers.ModelSerializer):
     # Include the related CustomUser data
-    custom_user = CustomUserSerializer(source='user', read_only=True)
+    user = CustomUserSerializer(source='user', read_only=True)
 
     class Meta:
         model = JobSeeker
