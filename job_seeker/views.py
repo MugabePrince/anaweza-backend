@@ -172,8 +172,8 @@ def update_job_seeker(request, id):
 def delete_job_seeker(request, id):
     job_seeker = get_object_or_404(JobSeeker, id=id)
 
-    if request.user != job_seeker.user and not request.user.is_superuser:
-        return Response({"error": "You are not authorized to delete this profile"}, status=status.HTTP_403_FORBIDDEN)
+    # if request.user != job_seeker.user and not request.user.is_superuser:
+    #     return Response({"error": "You are not authorized to delete this profile"}, status=status.HTTP_403_FORBIDDEN)
 
     job_seeker.delete()
     return Response({"message": "Job seeker profile deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
