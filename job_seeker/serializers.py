@@ -15,3 +15,5 @@ class JobSeekerSerializer(serializers.ModelSerializer):
     class Meta:
         model = JobSeeker
         exclude = ['user']
+
+#######
