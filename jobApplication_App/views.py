@@ -473,14 +473,14 @@ def delete_application(request, pk):
 
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
-def update_application_status(request, pk):
+def update_application_status(request, application_id):
     """Update application status"""
     try:
         # Get the application
         try:
-            application = Application.objects.get(id=pk)
+            application = Application.objects.get(id=application_id)
         except Application.DoesNotExist:
-            logger.error(f"Application with ID {pk} not found")
+            logger.error(f"Application with ID {application_id} not found")
             return Response(
                 {'error': 'Application not found'},
                 status=status.HTTP_404_NOT_FOUND
@@ -500,7 +500,7 @@ def update_application_status(request, pk):
             
         # Applicants can only withdraw their applications
         if application.user == request.user and new_status != 'withdrawn':
-            logger.warning(f"User {request.user.id} attempted to change their application {pk} to status {new_status}")
+            logger.warning(f"User {request.user.id} attempted to change their application {application_id} to status {new_status}")
             return Response(
                 {'error': 'You can only withdraw your application, not change its status'},
                 status=status.HTTP_403_FORBIDDEN
@@ -508,7 +508,7 @@ def update_application_status(request, pk):
             
         # Job creators can update to any status except withdrawn
         if not is_job_creator and not request.user.is_staff and application.user != request.user:
-            logger.warning(f"User {request.user.id} attempted to update status of application {pk}")
+            logger.warning(f"User {request.user.id} attempted to update status of application {application_id}")
             return Response(
                 {'error': 'You do not have permission to update this application status'},
                 status=status.HTTP_403_FORBIDDEN
@@ -552,7 +552,7 @@ def update_application_status(request, pk):
             
             application.save()
             
-        logger.info(f"Application {pk} status updated to {new_status} by user {request.user.id}")
+        logger.info(f"Application {application_id} status updated to {new_status} by user {request.user.id}")
         
         return Response({
             'message': f'Application status updated to {new_status}',
@@ -946,3 +946,191 @@ def get_job_offer_applications(request, job_offer_id):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
     
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from django.utils import timezone
+from django.core.mail import send_mail
+from django.conf import settings
+from .models import Application
+from .serializers import ApplicationSerializer
+import logging
+
+# Set up logger
+logger = logging.getLogger(__name__)
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def update_application_status(request, application_id):
+    """
+    Update an application's status and send email notification to the applicant
+    if they have an email address.
+    """
+    try:
+        # Check if the user has permission to update application status
+        # Only admins and employees should be able to update application status
+        if request.user.role not in ['admin', 'employee']:
+            return Response(
+                {"error": "You don't have permission to update application status"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Get the application
+        application = Application.objects.get(id=application_id)
+        
+        # Get the new status from request data
+        new_status = request.data.get('status')
+        if not new_status:
+            return Response(
+                {"error": "Status is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate the status
+        valid_statuses = [status[0] for status in Application.STATUS_CHOICES]
+        if new_status not in valid_statuses:
+            return Response(
+                {"error": f"Invalid status. Allowed values are: {', '.join(valid_statuses)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Get optional feedback
+        feedback = request.data.get('feedback', '')
+        
+        # Update the application
+        application.status = new_status
+        application.feedback = feedback
+        application.reviewed_by = request.user
+        application.reviewed_at = timezone.now()
+        application.save()
+        
+        # Check if the applicant has an email address
+        applicant_user = application.user
+        if applicant_user.email:
+            # Send email notification based on the status
+            job_title = application.job_offer.title
+            
+            # Define email templates based on status
+            email_templates = {
+                'shortlisted': {
+                    'subject': f"Congratulations! You've been shortlisted for {job_title}",
+                    'message': f"""Congratulations!
+                    
+You have been shortlisted for the position of {job_title}. 
+This is a significant step in your application process. 
+We will contact you soon with more details about the next steps.
+
+{feedback if feedback else ''}
+
+Best regards,
+The Recruitment Team
+"""
+                },
+                'accepted': {
+                    'subject': f"Congratulations! Your application for {job_title} has been accepted",
+                    'message': f"""Congratulations!
+                    
+We are pleased to inform you that your application for {job_title} has been accepted.
+We believe your skills and experience make you an excellent fit for this position.
+
+{feedback if feedback else ''}
+
+Best regards,
+The Recruitment Team
+"""
+                },
+                'rejected': {
+                    'subject': f"Update on your application for {job_title}",
+                    'message': f"""Dear Applicant,
+                    
+Thank you for your interest in the {job_title} position. After careful consideration,
+we regret to inform you that we have decided to pursue other candidates whose qualifications
+better match our current needs.
+
+{feedback if feedback else ''}
+
+We encourage you to apply for future positions that match your skills and experience.
+
+Best regards,
+The Recruitment Team
+"""
+                },
+                'reviewing': {
+                    'subject': f"Your application for {job_title} is being reviewed",
+                    'message': f"""Dear Applicant,
+                    
+Your application for {job_title} is currently under review.
+We appreciate your patience during this process.
+
+{feedback if feedback else ''}
+
+Best regards,
+The Recruitment Team
+"""
+                }
+            }
+            
+            # If there's a template for the status, send the email
+            if new_status in email_templates:
+                template = email_templates[new_status]
+                try:
+                    send_mail(
+                        subject=template['subject'],
+                        message=template['message'],
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[applicant_user.email],
+                        fail_silently=False,
+                    )
+                    logger.info(f"Email notification sent to {applicant_user.email} for application {application_id}")
+                except Exception as e:
+                    logger.error(f"Failed to send email notification: {str(e)}")
+        
+        # Return the updated application
+        serializer = ApplicationSerializer(application)
+        return Response(serializer.data)
+    
+    except Application.DoesNotExist:
+        return Response(
+            {"error": "Application not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        logger.error(f"Error updating application status: {str(e)}")
+        return Response(
+            {"error": f"An error occurred: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
