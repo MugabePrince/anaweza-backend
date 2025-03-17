@@ -287,6 +287,8 @@ def get_all_applications(request):
         # Serialize the data
         serializer = ApplicationSerializer(applications, many=True)
         
+        print(f"\n\nFound applications: {serializer.data}\n\n")
+        
         return Response({
             'count': applications.count(),
             'results': serializer.data
