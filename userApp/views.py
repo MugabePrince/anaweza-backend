@@ -258,6 +258,8 @@ def login_user(request):
 def reset_password(request):
     phone_number = request.data.get('email')
     new_password = request.data.get('new_password')
+    
+    print(f"Submitted Data: {phone_number}\n\n{new_password}")
 
     # Basic validation
     if not phone_number:
