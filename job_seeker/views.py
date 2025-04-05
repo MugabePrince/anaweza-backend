@@ -59,19 +59,19 @@ def create_job_seeker(request):
             validation_errors['resume'] = "Resume must be in PDF or DOC format"
     
     # # Fee validation
-    # try:
-    #     registration_fee = float(data.get('registration_fee', 0))
-    #     if registration_fee < 0:
-    #         validation_errors['registration_fee'] = "Registration fee cannot be negative"
-    # except ValueError:
-    #     validation_errors['registration_fee'] = "Registration fee must be a valid number"
+    try:
+        registration_fee = float(data.get('registration_fee', 0))
+        if registration_fee < 0:
+            validation_errors['registration_fee'] = "Registration fee cannot be negative"
+    except ValueError:
+        validation_errors['registration_fee'] = "Registration fee must be a valid number"
         
-    # try:
-    #     renewal_fee = float(data.get('renewal_fee', 0))
-    #     if renewal_fee < 0:
-    #         validation_errors['renewal_fee'] = "Renewal fee cannot be negative"
-    # except ValueError:
-    #     validation_errors['renewal_fee'] = "Renewal fee must be a valid number"
+    try:
+        renewal_fee = float(data.get('renewal_fee', 0))
+        if renewal_fee < 0:
+            validation_errors['renewal_fee'] = "Renewal fee cannot be negative"
+    except ValueError:
+        validation_errors['renewal_fee'] = "Renewal fee must be a valid number"
 
     # Return validation errors if any
     if validation_errors:
@@ -91,10 +91,10 @@ def create_job_seeker(request):
             education_level=data.get('education_level', 'none'),
             education_sector=data.get('education_sector', ''),
             resume=resume,
-            # registration_fee=registration_fee,
-            # renewal_fee=renewal_fee,
+            registration_fee=registration_fee,
+            renewal_fee=renewal_fee,
             created_by=user,
-            status=False,
+            status=True,
             district=data.get('district', ''),
             sector=data.get('sector', '')
         )
