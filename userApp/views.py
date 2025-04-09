@@ -613,7 +613,7 @@ def contact_us(request):
                 subject=f"Contact Us: {subject}",
                 message=f"Name: {names}\nEmail: {email}\n\nDescription:\n{description}",
                 from_email=email,
-                recipient_list=['princemugabe568@gmail.com'],
+                recipient_list=['ltdanaweza@gmail.com'],
                 fail_silently=False,
             )
             logger.info("Email sent successfully to %s", email)
