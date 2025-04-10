@@ -115,7 +115,7 @@ def create_application(request):
         if job_offer.salary_range and job_seeker.salary_range:
             try:
                 # Extract and compare salary ranges
-                logger.info(f"Comparing salary ranges - Job offer: {job_offer.salary_range}, Job seeker: {job_seeker.salary_range}")
+                print(f"Comparing salary ranges - Job offer: {job_offer.salary_range}, Job seeker: {job_seeker.salary_range}")
                 
                 # Parse job offer salary range
                 offer_min, offer_max = _parse_salary_range(job_offer.salary_range)
@@ -123,15 +123,15 @@ def create_application(request):
                 # Parse job seeker salary range
                 seeker_min, seeker_max = _parse_salary_range(job_seeker.salary_range)
                 
-                logger.info(f"Parsed salary ranges - Job offer: {offer_min}-{offer_max}, Job seeker: {seeker_min}-{seeker_max}")
+                print(f"Parsed salary ranges - Job offer: {offer_min}-{offer_max}, Job seeker: {seeker_min}-{seeker_max}")
                 
                 # Check if job offer salary is higher than job seeker's expected range
-                if offer_min > seeker_max:
-                    logger.error(f"Salary range mismatch: Job offer min ({offer_min}) exceeds job seeker's max ({seeker_max})")
-                    return Response(
-                        {'error': f"This job's salary range ({job_offer.salary_range}) exceeds your expected salary range ({job_seeker.salary_range})"},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
+                # if offer_min > seeker_max:
+                #     print(f"Salary range mismatch: Job offer min ({offer_min}) exceeds job seeker's max ({seeker_max})")
+                #     return Response(
+                #         {'error': f"This job's salary range ({job_offer.salary_range}) exceeds your expected salary range ({job_seeker.salary_range})"},
+                #         status=status.HTTP_400_BAD_REQUEST
+                #     )
             except (ValueError, TypeError) as e:
                 # Log the error but don't block the application if there's an issue parsing the salary ranges
                 logger.warning(f"Error comparing salary ranges: {str(e)}. Job offer: {job_offer.salary_range}, Job seeker: {job_seeker.salary_range}")
