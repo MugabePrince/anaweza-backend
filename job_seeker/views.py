@@ -16,8 +16,8 @@ def create_job_seeker(request):
     data = request.data
     
     # Print received data for debugging
-    print("Received data:", data)
-    print("Files:", request.FILES)
+    # print("Received data:", data)
+    # print("Files:", request.FILES)
 
  
     # Duplicate check
@@ -283,8 +283,8 @@ def update_user_details(request):
         job_seeker_data = request.data.get('job_seeker', {})
         
         # Log the received data for debugging
-        print(f"\n\n Submitted custom user data: {custom_user_data}\n\n")
-        print(f"\n\n Submitted job seeker data: {job_seeker_data}\n\n")
+        # print(f"\n\n Submitted custom user data: {custom_user_data}\n\n")
+        # print(f"\n\n Submitted job seeker data: {job_seeker_data}\n\n")
         
         # Create serializers with the data
         custom_user_serializer = CustomUserSerializer(user, data=custom_user_data, partial=True)

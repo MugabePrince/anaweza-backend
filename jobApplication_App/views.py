@@ -115,7 +115,7 @@ def create_application(request):
         if job_offer.salary_range and job_seeker.salary_range:
             try:
                 # Extract and compare salary ranges
-                print(f"Comparing salary ranges - Job offer: {job_offer.salary_range}, Job seeker: {job_seeker.salary_range}")
+                # print(f"Comparing salary ranges - Job offer: {job_offer.salary_range}, Job seeker: {job_seeker.salary_range}")
                 
                 # Parse job offer salary range
                 offer_min, offer_max = _parse_salary_range(job_offer.salary_range)
@@ -265,7 +265,7 @@ def _parse_salary_range(salary_range_str):
 def get_all_applications(request):
     """Get all applications (admin only)"""
     try:
-        logger.info(f"Admin user {request.user.id} requesting all applications")
+        # logger.info(f"Admin user {request.user.id} requesting all applications")
 
         # Optional filters
         status_filter = request.query_params.get('status')
@@ -287,7 +287,7 @@ def get_all_applications(request):
         # Serialize the data
         serializer = ApplicationSerializer(applications, many=True)
         
-        print(f"\n\nFound applications: {serializer.data}\n\n")
+        # print(f"\n\nFound applications: {serializer.data}\n\n")
         
         return Response({
             'count': applications.count(),
@@ -320,7 +320,7 @@ def get_application(request, pk):
         # Check authorization - only the applicant or job poster can view
         if application.user != request.user and (hasattr(application.job_offer, 'created_by') and application.job_offer.created_by != request.user):
             if not request.user.is_staff:  # Allow admins to access
-                logger.warning(f"User {request.user.id} attempted unauthorized access to application {pk}")
+                # logger.warning(f"User {request.user.id} attempted unauthorized access to application {pk}")
                 return Response(
                     {'error': 'You do not have permission to view this application'},
                     status=status.HTTP_403_FORBIDDEN
@@ -356,7 +356,7 @@ def update_application(request, pk):
         
         # Check authorization - only the applicant can update their application
         if application.user != request.user:
-            logger.warning(f"User {request.user.id} attempted to update application {pk} belonging to user {application.user.id}")
+            # logger.warning(f"User {request.user.id} attempted to update application {pk} belonging to user {application.user.id}")
             return Response(
                 {'error': 'You do not have permission to update this application'},
                 status=status.HTTP_403_FORBIDDEN
@@ -364,7 +364,7 @@ def update_application(request, pk):
         
         # Check if application can be updated (can't update if not in pending or reviewing status)
         if application.status not in ['pending', 'reviewing']:
-            logger.error(f"Cannot update application with status '{application.status}'")
+            # logger.error(f"Cannot update application with status '{application.status}'")
             return Response(
                 {'error': f"Cannot update application with status '{application.status}'"},
                 status=status.HTTP_400_BAD_REQUEST
@@ -394,7 +394,7 @@ def update_application(request, pk):
             
             if serializer.is_valid():
                 updated_application = serializer.save()
-                logger.info(f"Application {pk} updated by user {request.user.id}")
+                # logger.info(f"Application {pk} updated by user {request.user.id}")
                 
                 return Response({
                     'message': 'Application updated successfully',
@@ -834,7 +834,7 @@ def get_my_applications(request):
         # Serialize the data
         serializer = ApplicationSerializer(applications, many=True)
         
-        logger.info(f"Retrieved {applications.count()} applications for user {request.user.id}")
+        # logger.info(f"Retrieved {applications.count()} applications for user {request.user.id}")
         
         return Response({
             'count': applications.count(),
@@ -878,7 +878,7 @@ def get_my_job_offer_applications(request):
         # Serialize the data
         serializer = ApplicationSerializer(applications, many=True)
         
-        logger.info(f"Retrieved {applications.count()} applications for job offers created by user {request.user.id}")
+        # logger.info(f"Retrieved {applications.count()} applications for job offers created by user {request.user.id}")
         
         return Response({
             'count': applications.count(),
@@ -934,7 +934,7 @@ def get_job_offer_applications(request, job_offer_id):
         # Serialize the data
         serializer = ApplicationSerializer(applications, many=True)
         
-        logger.info(f"Retrieved {applications.count()} applications for job offer {job_offer_id}")
+        # logger.info(f"Retrieved {applications.count()} applications for job offer {job_offer_id}")
         
         return Response({
             'count': applications.count(),
