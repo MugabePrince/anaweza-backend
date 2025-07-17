@@ -1,0 +1,1 @@
+default_app_config = 'job_offer_app.apps.JobOfferAppConfig'

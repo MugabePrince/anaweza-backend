@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>New Job Opportunity</title>
+</head>
+<body>
+    <h2>Hello {{ job_seeker.first_name }},</h2>
+    <p>A new job matching your skills is available on <a href="{{ site_url }}">Anaweza</a>:</p>
+    
+    <h3>{{ job_offer.title }}</h3>
+    <p><strong>Company:</strong> {{ job_offer.company_name|default:"N/A" }}</p>
+    <p><strong>Location:</strong> {{ job_offer.location }}</p>
+    <p><strong>Deadline:</strong> {{ job_offer.deadline }}</p>
+    
+    <p>Log in to <a href="{{ site_url }}">Anaweza</a> to apply!</p>
+    
+    <p>Best regards,<br>The Anaweza Team</p>
+</body>
+</html>
