@@ -154,7 +154,8 @@ mport==0.1.1
 msgpack==1.1.1
 mtcnn==0.1.1
 multidict==6.6.3
-# mysql==0.0.3
+mysql==0.0.3
+mysqlclient==2.2.4
 namex==0.0.8
 nbclient==0.10.1
 nbconvert==7.16.4
@@ -179,7 +180,7 @@ packaging==24.0
 pandas==2.2.2
 pandocfilters==1.5.1
 parso==0.8.4
-paypack-py==1.0.5
+paypack-py
 pdf2image==1.17.0
 pillow==10.2.0
 pip-tools==7.4.1
@@ -226,8 +227,8 @@ python-docx==1.1.2
 python-json-logger==2.0.7
 pytz==2024.1
 PyWavelets==1.6.0
-# pywin32==308
-# pywinpty==2.0.14
+# pywin32==308  # Windows only - removed for cross-platform compatibility
+# pywinpty==2.0.14  # Windows only - removed for cross-platform compatibility
 PyYAML==6.0.1
 pyzmq==26.2.0
 qrcode==7.4.2
@@ -265,7 +266,7 @@ tenacity==8.3.0
 tensorboard==2.16.2
 tensorboard-data-server==0.7.2
 tensorflow==2.16.1
-# tensorflow-intel==2.16.1
+tensorflow-intel==2.16.1
 termcolor==2.4.0
 terminado==0.18.1
 tf_keras==2.16.0
