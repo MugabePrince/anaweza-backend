@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'advertisementApp',
     'jobApplication_App',
     'testimonialApp',
+    'chatApp',
    
 ]
 
@@ -116,8 +117,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'backend.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 # DATABASES = {
 #     'default': {
@@ -171,10 +170,7 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = 'static/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
@@ -213,6 +209,9 @@ DEFAULT_FROM_EMAIL = 'anaweza <ltdanaweza@gmail.com>'
 
 AUTH_USER_MODEL = 'userApp.CustomUser'
 
+
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

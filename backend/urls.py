@@ -1,4 +1,4 @@
-
+# urls.py
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
@@ -13,8 +13,9 @@ urlpatterns = [
     path('advertisement/', include('advertisementApp.urls')),
     path('application/', include('jobApplication_App.urls')),
     path('testimony/', include('testimonialApp.urls')),
+    path('chat/', include('chatApp.urls')),
 ]
 
-
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# This will serve both static and media files in development
+urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
