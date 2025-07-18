@@ -68,7 +68,6 @@ django-timezone-field==7.0
 django_csp==3.8
 djangorestframework==3.15.1
 djangorestframework-simplejwt==5.3.1
-# dlib==19.24.99
 docopt==0.6.2
 et-xmlfile==1.1.0
 executing==2.1.0
@@ -154,8 +153,6 @@ mport==0.1.1
 msgpack==1.1.1
 mtcnn==0.1.1
 multidict==6.6.3
-# mysql==0.0.3
-# mysqlclient==2.2.4
 namex==0.0.8
 nbclient==0.10.1
 nbconvert==7.16.4
@@ -227,8 +224,6 @@ python-docx==1.1.2
 python-json-logger==2.0.7
 pytz==2024.1
 PyWavelets==1.6.0
-# pywin32==308  # Windows only - removed for cross-platform compatibility
-# pywinpty==2.0.14  # Windows only - removed for cross-platform compatibility
 PyYAML==6.0.1
 pyzmq==26.2.0
 qrcode==7.4.2
@@ -266,7 +261,6 @@ tenacity==8.3.0
 tensorboard==2.16.2
 tensorboard-data-server==0.7.2
 tensorflow==2.16.1
-# tensorflow-intel==2.16.1
 termcolor==2.4.0
 terminado==0.18.1
 tf_keras==2.16.0
