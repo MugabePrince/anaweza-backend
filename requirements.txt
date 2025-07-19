@@ -69,7 +69,7 @@ django-timezone-field==7.0
 django_csp==3.8
 djangorestframework==3.15.1
 djangorestframework-simplejwt==5.3.1
-dlib==19.24.9
+# dlib==19.24.9
 docopt==0.6.2
 et-xmlfile==1.1.0
 executing==2.1.0
