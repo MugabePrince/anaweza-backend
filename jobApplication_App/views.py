@@ -37,7 +37,7 @@ def create_application(request):
     """Create a new application for a job offer"""
     try:
         # Log the request
-        logger.info(f"Application creation attempt by user {request.user.id}")
+        print(f"Application creation attempt by user {request.user.id}")
         
         # Check if the user has a job seeker profile
         try:
@@ -45,14 +45,14 @@ def create_application(request):
             
             # Check if job seeker status is active
             if not job_seeker.status:
-                logger.error(f"User {request.user.id} has an inactive job seeker profile")
+                print(f"User {request.user.id} has an inactive job seeker profile")
                 return Response(
                     {'error': 'Only active job seekers can apply for jobs'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
                 
         except JobSeeker.DoesNotExist:
-            logger.error(f"User {request.user.id} does not have a job seeker profile")
+            print(f"User {request.user.id} does not have a job seeker profile")
             return Response(
                 {'error': 'You must complete your job seeker profile before applying'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -62,7 +62,7 @@ def create_application(request):
         job_offer_id = request.data.get('job_offer') or request.data.get('job_offer_id')
         print(f"\n\n Submitted Job Offer ID: {job_offer_id}\n\n")
         if not job_offer_id:
-            logger.error("Missing job offer ID in request data")
+            print("Missing job offer ID in request data")
             return Response(
                 {'error': 'Job offer ID is required'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -72,13 +72,13 @@ def create_application(request):
         try:
             job_offer = JobOffer.objects.get(id=job_offer_id)
         except JobOffer.DoesNotExist:
-            logger.error(f"Job offer with ID {job_offer_id} does not exist")
+            print(f"Job offer with ID {job_offer_id} does not exist")
             return Response(
                 {'error': f"Job offer with ID {job_offer_id} does not exist"},
                 status=status.HTTP_404_NOT_FOUND
             )
         except ValueError:
-            logger.error(f"Invalid job offer ID format: {job_offer_id}")
+            print(f"Invalid job offer ID format: {job_offer_id}")
             return Response(
                 {'error': f"Invalid job offer ID format: {job_offer_id}"},
                 status=status.HTTP_400_BAD_REQUEST
@@ -86,7 +86,7 @@ def create_application(request):
         
         # Check job status
         if job_offer.status not in ['active', 'draft']:
-            logger.error(f"Cannot apply to job with status '{job_offer.status}'")
+            print(f"Cannot apply to job with status '{job_offer.status}'")
             return Response(
                 {'error': f"Cannot apply to a job that is {job_offer.status}"},
                 status=status.HTTP_400_BAD_REQUEST
@@ -96,7 +96,7 @@ def create_application(request):
         current_date = timezone.now().date()
         if job_offer.deadline < current_date:
             days_passed = (current_date - job_offer.deadline).days
-            logger.error(f"Application deadline has passed for job offer {job_offer_id} ({days_passed} days ago)")
+            print(f"Application deadline has passed for job offer {job_offer_id} ({days_passed} days ago)")
             return Response(
                 {'error': f"The application deadline for this job has passed {days_passed} days ago"},
                 status=status.HTTP_400_BAD_REQUEST
@@ -105,7 +105,7 @@ def create_application(request):
         # Check if already applied
         existing_application = Application.objects.filter(user=request.user, job_offer=job_offer).first()
         if existing_application:
-            logger.error(f"User {request.user.id} has already applied for job offer {job_offer_id} with status {existing_application.status}")
+            print(f"User {request.user.id} has already applied for job offer {job_offer_id} with status {existing_application.status}")
             return Response(
                 {'error': f"You have already applied for this job (Status: {existing_application.status})"},
                 status=status.HTTP_400_BAD_REQUEST
@@ -134,7 +134,7 @@ def create_application(request):
                 #     )
             except (ValueError, TypeError) as e:
                 # Log the error but don't block the application if there's an issue parsing the salary ranges
-                logger.warning(f"Error comparing salary ranges: {str(e)}. Job offer: {job_offer.salary_range}, Job seeker: {job_seeker.salary_range}")
+                print(f"Error comparing salary ranges: {str(e)}. Job offer: {job_offer.salary_range}, Job seeker: {job_seeker.salary_range}")
         
         # Create the application directly without using serializer for validation
         with transaction.atomic():
@@ -174,7 +174,7 @@ def create_application(request):
                  
     except IntegrityError as e:
         error_msg = str(e)
-        logger.error(f"Database integrity error: {error_msg}")
+        print(f"Database integrity error: {error_msg}")
         if "unique constraint" in error_msg.lower() or "duplicate key" in error_msg.lower():
             return Response(
                 {'error': "You have already applied for this job"},
@@ -185,7 +185,7 @@ def create_application(request):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
     except Exception as e:
-        logger.exception(f"Unexpected error in create_application: {str(e)}")
+        print(f"Unexpected error in create_application: {str(e)}")
         return Response(
             {'error': 'An unexpected error occurred'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -238,7 +238,7 @@ def _parse_salary_range(salary_range_str):
             
             return (min_value, max_value)
         except (ValueError, IndexError) as e:
-            logger.warning(f"Error parsing salary range with hyphen: {salary_range_str}, error: {str(e)}")
+            print(f"Error parsing salary range with hyphen: {salary_range_str}, error: {str(e)}")
             # Fall back to using regex for more complex cases
     
     # Step 5: If not a clear range or the above parsing failed, try regex to extract numbers
@@ -247,7 +247,7 @@ def _parse_salary_range(salary_range_str):
     
     if len(numbers) == 0:
         # No numbers found, return default
-        logger.warning(f"No numbers found in salary string: {salary_range_str}")
+        print(f"No numbers found in salary string: {salary_range_str}")
         return (0, float('inf'))
     elif len(numbers) == 1:
         # Single number - use as min and max
@@ -265,7 +265,7 @@ def _parse_salary_range(salary_range_str):
 def get_all_applications(request):
     """Get all applications (admin only)"""
     try:
-        # logger.info(f"Admin user {request.user.id} requesting all applications")
+        # print(f"Admin user {request.user.id} requesting all applications")
 
         # Optional filters
         status_filter = request.query_params.get('status')
@@ -295,7 +295,7 @@ def get_all_applications(request):
         })
 
     except Exception as e:
-        logger.exception(f"Error retrieving all applications: {str(e)}")
+        print(f"Error retrieving all applications: {str(e)}")
         return Response(
             {'error': 'An error occurred while retrieving applications'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -311,7 +311,7 @@ def get_application(request, pk):
         try:
             application = Application.objects.get(id=pk)
         except Application.DoesNotExist:
-            logger.error(f"Application with ID {pk} not found")
+            print(f"Application with ID {pk} not found")
             return Response(
                 {'error': 'Application not found'},
                 status=status.HTTP_404_NOT_FOUND
@@ -328,7 +328,7 @@ def get_application(request, pk):
         
         # Serialize and return the data
         serializer = ApplicationSerializer(application)
-        logger.info(f"Application {pk} details retrieved by user {request.user.id}")
+        print(f"Application {pk} details retrieved by user {request.user.id}")
         return Response(serializer.data)
         
     except Exception as e:
@@ -348,7 +348,7 @@ def update_application(request, pk):
         try:
             application = Application.objects.get(id=pk)
         except Application.DoesNotExist:
-            logger.error(f"Application with ID {pk} not found")
+            print(f"Application with ID {pk} not found")
             return Response(
                 {'error': 'Application not found'},
                 status=status.HTTP_404_NOT_FOUND
@@ -364,7 +364,7 @@ def update_application(request, pk):
         
         # Check if application can be updated (can't update if not in pending or reviewing status)
         if application.status not in ['pending', 'reviewing']:
-            # logger.error(f"Cannot update application with status '{application.status}'")
+            # print(f"Cannot update application with status '{application.status}'")
             return Response(
                 {'error': f"Cannot update application with status '{application.status}'"},
                 status=status.HTTP_400_BAD_REQUEST
@@ -394,7 +394,7 @@ def update_application(request, pk):
             
             if serializer.is_valid():
                 updated_application = serializer.save()
-                # logger.info(f"Application {pk} updated by user {request.user.id}")
+                # print(f"Application {pk} updated by user {request.user.id}")
                 
                 return Response({
                     'message': 'Application updated successfully',
@@ -411,7 +411,7 @@ def update_application(request, pk):
                         error_details[field] = str(errors)
                 
                 error_message = "; ".join([f"{field}: {error}" for field, error in error_details.items()])
-                logger.error(f"Application update validation failed: {error_message}")
+                print(f"Application update validation failed: {error_message}")
                 
                 return Response(
                     {'error': error_message, 'details': serializer.errors},
@@ -435,7 +435,7 @@ def delete_application(request, pk):
         try:
             application = Application.objects.get(id=pk)
         except Application.DoesNotExist:
-            logger.error(f"Application with ID {pk} not found")
+            print(f"Application with ID {pk} not found")
             return Response(
                 {'error': 'Application not found'},
                 status=status.HTTP_404_NOT_FOUND
@@ -451,7 +451,7 @@ def delete_application(request, pk):
         
         # Check if application can be deleted (can't delete if not in pending, rejected, or withdrawn status)
         if application.user == request.user and application.status not in ['pending', 'rejected', 'withdrawn']:
-            logger.error(f"Cannot delete application with status '{application.status}'")
+            print(f"Cannot delete application with status '{application.status}'")
             return Response(
                 {'error': f"Cannot delete application with status '{application.status}'"},
                 status=status.HTTP_400_BAD_REQUEST
@@ -459,7 +459,7 @@ def delete_application(request, pk):
         
         # Delete application
         application.delete()
-        logger.info(f"Application {pk} deleted by user {request.user.id}")
+        print(f"Application {pk} deleted by user {request.user.id}")
         
         return Response({
             'message': 'Application deleted successfully'
@@ -482,7 +482,7 @@ def update_application_status(request, application_id):
         try:
             application = Application.objects.get(id=application_id)
         except Application.DoesNotExist:
-            logger.error(f"Application with ID {application_id} not found")
+            print(f"Application with ID {application_id} not found")
             return Response(
                 {'error': 'Application not found'},
                 status=status.HTTP_404_NOT_FOUND
@@ -494,7 +494,7 @@ def update_application_status(request, application_id):
         
         new_status = request.data.get('status')
         if not new_status:
-            logger.error("Missing status in request data")
+            print("Missing status in request data")
             return Response(
                 {'error': 'Status is required'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -518,7 +518,7 @@ def update_application_status(request, application_id):
         
         # Validate the new status
         if new_status not in [choice[0] for choice in Application.STATUS_CHOICES]:
-            logger.error(f"Invalid status: {new_status}")
+            print(f"Invalid status: {new_status}")
             return Response(
                 {'error': f"Invalid status. Must be one of {[choice[0] for choice in Application.STATUS_CHOICES]}"},
                 status=status.HTTP_400_BAD_REQUEST
@@ -526,14 +526,14 @@ def update_application_status(request, application_id):
         
         # Check for specific status transition validations
         if application.status == 'withdrawn' and application.user != request.user:
-            logger.error(f"Cannot change status of withdrawn application")
+            print(f"Cannot change status of withdrawn application")
             return Response(
                 {'error': 'Cannot change status of withdrawn application'},
                 status=status.HTTP_400_BAD_REQUEST
             )
             
         if application.status == 'accepted' and new_status not in ['rejected', 'withdrawn']:
-            logger.error(f"Cannot change status from accepted to {new_status}")
+            print(f"Cannot change status from accepted to {new_status}")
             return Response(
                 {'error': f"Cannot change status from accepted to {new_status}"},
                 status=status.HTTP_400_BAD_REQUEST
@@ -554,7 +554,7 @@ def update_application_status(request, application_id):
             
             application.save()
             
-        logger.info(f"Application {application_id} status updated to {new_status} by user {request.user.id}")
+        print(f"Application {application_id} status updated to {new_status} by user {request.user.id}")
         
         return Response({
             'message': f'Application status updated to {new_status}',
@@ -579,7 +579,7 @@ def accept_application(request, pk):
         try:
             application = Application.objects.get(id=pk)
         except Application.DoesNotExist:
-            logger.error(f"Application with ID {pk} not found")
+            print(f"Application with ID {pk} not found")
             return Response(
                 {'error': 'Application not found'},
                 status=status.HTTP_404_NOT_FOUND
@@ -598,7 +598,7 @@ def accept_application(request, pk):
         
         # Check if application can be accepted (can't accept withdrawn applications)
         if application.status == 'withdrawn':
-            logger.error(f"Cannot accept withdrawn application")
+            print(f"Cannot accept withdrawn application")
             return Response(
                 {'error': 'Cannot accept withdrawn application'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -618,7 +618,7 @@ def accept_application(request, pk):
             
             application.save()
             
-        logger.info(f"Application {pk} accepted by user {request.user.id}")
+        print(f"Application {pk} accepted by user {request.user.id}")
         
         return Response({
             'message': 'Application accepted successfully',
@@ -643,7 +643,7 @@ def reject_application(request, pk):
         try:
             application = Application.objects.get(id=pk)
         except Application.DoesNotExist:
-            logger.error(f"Application with ID {pk} not found")
+            print(f"Application with ID {pk} not found")
             return Response(
                 {'error': 'Application not found'},
                 status=status.HTTP_404_NOT_FOUND
@@ -662,7 +662,7 @@ def reject_application(request, pk):
         
         # Check if application can be rejected (can't reject withdrawn applications)
         if application.status == 'withdrawn':
-            logger.error(f"Cannot reject withdrawn application")
+            print(f"Cannot reject withdrawn application")
             return Response(
                 {'error': 'Cannot reject withdrawn application'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -682,7 +682,7 @@ def reject_application(request, pk):
             
             application.save()
             
-        logger.info(f"Application {pk} rejected by user {request.user.id}")
+        print(f"Application {pk} rejected by user {request.user.id}")
         
         return Response({
             'message': 'Application rejected successfully',
@@ -707,7 +707,7 @@ def shortlist_application(request, pk):
         try:
             application = Application.objects.get(id=pk)
         except Application.DoesNotExist:
-            logger.error(f"Application with ID {pk} not found")
+            print(f"Application with ID {pk} not found")
             return Response(
                 {'error': 'Application not found'},
                 status=status.HTTP_404_NOT_FOUND
@@ -726,7 +726,7 @@ def shortlist_application(request, pk):
         
         # Check if application can be shortlisted (can't shortlist withdrawn or rejected applications)
         if application.status in ['withdrawn', 'rejected']:
-            logger.error(f"Cannot shortlist application with status {application.status}")
+            print(f"Cannot shortlist application with status {application.status}")
             return Response(
                 {'error': f'Cannot shortlist application with status {application.status}'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -746,7 +746,7 @@ def shortlist_application(request, pk):
             
             application.save()
             
-        logger.info(f"Application {pk} shortlisted by user {request.user.id}")
+        print(f"Application {pk} shortlisted by user {request.user.id}")
         
         return Response({
             'message': 'Application shortlisted successfully',
@@ -771,7 +771,7 @@ def withdraw_application(request, pk):
         try:
             application = Application.objects.get(id=pk)
         except Application.DoesNotExist:
-            logger.error(f"Application with ID {pk} not found")
+            print(f"Application with ID {pk} not found")
             return Response(
                 {'error': 'Application not found'},
                 status=status.HTTP_404_NOT_FOUND
@@ -787,7 +787,7 @@ def withdraw_application(request, pk):
         
         # Check if application can be withdrawn (can't withdraw if already accepted or rejected)
         if application.status in ['accepted', 'rejected', 'withdrawn']:
-            logger.error(f"Cannot withdraw application with status {application.status}")
+            print(f"Cannot withdraw application with status {application.status}")
             return Response(
                 {'error': f'Cannot withdraw application with status {application.status}'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -797,7 +797,7 @@ def withdraw_application(request, pk):
         application.status = 'withdrawn'
         application.save()
         
-        logger.info(f"Application {pk} withdrawn by user {request.user.id}")
+        print(f"Application {pk} withdrawn by user {request.user.id}")
         
         return Response({
             'message': 'Application withdrawn successfully',
@@ -834,7 +834,7 @@ def get_my_applications(request):
         # Serialize the data
         serializer = ApplicationSerializer(applications, many=True)
         
-        # logger.info(f"Retrieved {applications.count()} applications for user {request.user.id}")
+        # print(f"Retrieved {applications.count()} applications for user {request.user.id}")
         
         return Response({
             'count': applications.count(),
@@ -878,7 +878,7 @@ def get_my_job_offer_applications(request):
         # Serialize the data
         serializer = ApplicationSerializer(applications, many=True)
         
-        # logger.info(f"Retrieved {applications.count()} applications for job offers created by user {request.user.id}")
+        # print(f"Retrieved {applications.count()} applications for job offers created by user {request.user.id}")
         
         return Response({
             'count': applications.count(),
@@ -902,7 +902,7 @@ def get_job_offer_applications(request, job_offer_id):
         try:
             job_offer = JobOffer.objects.get(id=job_offer_id)
         except JobOffer.DoesNotExist:
-            logger.error(f"Job offer with ID {job_offer_id} not found")
+            print(f"Job offer with ID {job_offer_id} not found")
             return Response(
                 {'error': 'Job offer not found'},
                 status=status.HTTP_404_NOT_FOUND
@@ -934,7 +934,7 @@ def get_job_offer_applications(request, job_offer_id):
         # Serialize the data
         serializer = ApplicationSerializer(applications, many=True)
         
-        # logger.info(f"Retrieved {applications.count()} applications for job offer {job_offer_id}")
+        # print(f"Retrieved {applications.count()} applications for job offer {job_offer_id}")
         
         return Response({
             'count': applications.count(),
@@ -1117,9 +1117,9 @@ The Recruitment Team
                         recipient_list=[applicant_user.email],
                         fail_silently=False,
                     )
-                    logger.info(f"Email notification sent to {applicant_user.email} for application {application_id}")
+                    print(f"Email notification sent to {applicant_user.email} for application {application_id}")
                 except Exception as e:
-                    logger.error(f"Failed to send email notification: {str(e)}")
+                    print(f"Failed to send email notification: {str(e)}")
         
         # Return the updated application
         serializer = ApplicationSerializer(application)
@@ -1131,7 +1131,7 @@ The Recruitment Team
             status=status.HTTP_404_NOT_FOUND
         )
     except Exception as e:
-        logger.error(f"Error updating application status: {str(e)}")
+        print(f"Error updating application status: {str(e)}")
         return Response(
             {"error": f"An error occurred: {str(e)}"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
