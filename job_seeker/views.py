@@ -54,7 +54,12 @@ def parse_skills_from_frontend(skills_data):
 @permission_classes([IsAuthenticated])
 def create_job_seeker(request):
     user = request.user
-    data = dict(request.data) # Make a copy to modify
+    
+    # FIX: Use dict() instead of copy() to avoid BufferedRandom pickle issue
+    data = dict(request.data)
+    
+    # Handle file uploads separately
+    resume = request.FILES.get('resume', None)
     
     # Print received data for debugging
     print("Received data:", data)
@@ -68,13 +73,21 @@ def create_job_seeker(request):
     validation_errors = {}
     required_fields = ['first_name', 'last_name', 'gender', 'salary_range']
     for field in required_fields:
-        if not data.get(field):
+        field_value = data.get(field)
+        # Handle list values (common with QueryDict conversion)
+        if isinstance(field_value, list):
+            field_value = field_value[0] if field_value else ''
+        if not field_value:
             validation_errors[field] = f"{field} is required"
     
     # Experience validation
     try:
-        if 'experience' in data and data['experience']:
-            experience = int(data.get('experience', 0))
+        experience_value = data.get('experience', 0)
+        if isinstance(experience_value, list):
+            experience_value = experience_value[0] if experience_value else 0
+        
+        if experience_value:
+            experience = int(experience_value)
             if experience < 0:
                 validation_errors['experience'] = "Experience cannot be negative"
         else:
@@ -84,6 +97,9 @@ def create_job_seeker(request):
 
     # Enhanced Skills validation and parsing
     skills_raw = data.get('skills', '')
+    if isinstance(skills_raw, list):
+        skills_raw = skills_raw[0] if skills_raw else ''
+    
     skills_with_experience = []
     
     if skills_raw:
@@ -112,23 +128,30 @@ def create_job_seeker(request):
             validation_errors['skills'] = "Invalid skills format"
 
     # Resume validation
-    resume = request.FILES.get('resume', None)
     if resume:
         allowed_extensions = ['pdf', 'doc', 'docx']
         file_extension = resume.name.split('.')[-1].lower()
         if file_extension not in allowed_extensions:
             validation_errors['resume'] = "Resume must be in PDF or DOC format"
     
-    # Fee validation
+    # Fee validation - handle list values
     try:
-        registration_fee = float(data.get('registration_fee', 0))
+        reg_fee_value = data.get('registration_fee', 0)
+        if isinstance(reg_fee_value, list):
+            reg_fee_value = reg_fee_value[0] if reg_fee_value else 0
+        
+        registration_fee = float(reg_fee_value)
         if registration_fee < 0:
             validation_errors['registration_fee'] = "Registration fee cannot be negative"
     except ValueError:
         validation_errors['registration_fee'] = "Registration fee must be a valid number"
         
     try:
-        renewal_fee = float(data.get('renewal_fee', 0))
+        renewal_fee_value = data.get('renewal_fee', 0)
+        if isinstance(renewal_fee_value, list):
+            renewal_fee_value = renewal_fee_value[0] if renewal_fee_value else 0
+            
+        renewal_fee = float(renewal_fee_value)
         if renewal_fee < 0:
             validation_errors['renewal_fee'] = "Renewal fee cannot be negative"
     except ValueError:
@@ -138,25 +161,29 @@ def create_job_seeker(request):
     if validation_errors:
         return Response(validation_errors, status=status.HTTP_400_BAD_REQUEST)
 
+    # Helper function to get single value from list or return as-is
+    def get_single_value(value):
+        return value[0] if isinstance(value, list) and value else (value if not isinstance(value, list) else '')
+
     # Create job seeker profile
     try:
         job_seeker = JobSeeker.objects.create(
             user=user,
-            first_name=data['first_name'],
-            middle_name=data.get('middle_name', ''),
-            last_name=data['last_name'],
-            gender=data['gender'],
-            salary_range=data.get('salary_range', ''),
+            first_name=get_single_value(data['first_name']),
+            middle_name=get_single_value(data.get('middle_name', '')),
+            last_name=get_single_value(data['last_name']),
+            gender=get_single_value(data['gender']),
+            salary_range=get_single_value(data.get('salary_range', '')),
             experience=experience,
-            education_level=data.get('education_level', 'none'),
-            education_sector=data.get('education_sector', ''),
+            education_level=get_single_value(data.get('education_level', 'none')),
+            education_sector=get_single_value(data.get('education_sector', '')),
             resume=resume,
             registration_fee=registration_fee,
             renewal_fee=renewal_fee,
             created_by=user,
             status=True,
-            district=data.get('district', ''),
-            sector=data.get('sector', '')
+            district=get_single_value(data.get('district', '')),
+            sector=get_single_value(data.get('sector', ''))
         )
         
         # Set skills with experience levels using the new method
@@ -168,8 +195,9 @@ def create_job_seeker(request):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     except Exception as e:
         print("Error creating job seeker:", str(e))
+        import traceback
+        traceback.print_exc()  # Print full stack trace for debugging
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 
 @api_view(['GET'])
