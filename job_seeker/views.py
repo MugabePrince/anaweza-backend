@@ -54,7 +54,7 @@ def parse_skills_from_frontend(skills_data):
 @permission_classes([IsAuthenticated])
 def create_job_seeker(request):
     user = request.user
-    data = request.data.copy()  # Make a copy to modify
+    data = dict(request.data) # Make a copy to modify
     
     # Print received data for debugging
     print("Received data:", data)
@@ -169,6 +169,8 @@ def create_job_seeker(request):
     except Exception as e:
         print("Error creating job seeker:", str(e))
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
